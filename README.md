@@ -41,7 +41,7 @@ The public instance of the Azzamo Banlist API is available at [https://ban-api.a
 
 5. **Run the application**:
    ```bash
-   uvicorn main:app --reload
+   uvicorn main:app --host 0.0.0.0 --port 8000
    ```
 
 ## Usage
