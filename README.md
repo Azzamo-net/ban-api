@@ -12,6 +12,11 @@ Azzamo Banlist API is a FastAPI-based service for managing a list of blocked pub
 - **Rate Limiting**: Apply rate limiting to all endpoints.
 - **Interactive API Documentation**: Access interactive API documentation via Swagger UI.
 
+## Public Instance
+
+The public instance of the Azzamo Banlist API is available at [ban-api.azzamo.net](http://ban-api.azzamo.net).
+
+
 ## Installation
 
 1. **Clone the repository**:
