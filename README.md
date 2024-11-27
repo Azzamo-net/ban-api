@@ -14,7 +14,7 @@ Azzamo Banlist API is a FastAPI-based service for managing a list of blocked pub
 
 ## Public Instance
 
-The public instance of the Azzamo Banlist API is available at [ban-api.azzamo.net](http://ban-api.azzamo.net).
+The public instance of the Azzamo Banlist API is available at [https://ban-api.azzamo.net](https://ban-api.azzamo.net).
 
 
 ## Installation
