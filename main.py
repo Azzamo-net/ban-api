@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, Body
 from sqlalchemy.orm import Session
 import models, crud, schemas, database, utils
 from database import engine, SessionLocal
@@ -38,9 +38,10 @@ async def get_blocked_pubkeys(db: Session = Depends(get_db)):
 
 @app.get("/blocked/words", response_model=list[schemas.Word], summary="Get Blocked Words", description="Retrieve a list of all blocked words.")
 async def get_blocked_words(db: Session = Depends(get_db)):
-    return crud.get_blocked_words(db)
+    words = crud.get_blocked_words(db)
+    return [{"id": word.id, "word": word.word, "timestamp": word.timestamp.isoformat()} for word in words]
 
-@app.get("/blocked/ips", response_model=list[schemas.IPAddress], summary="Get Blocked IPs", description="Retrieve a list of all blocked IP addresses.")
+@app.get("/blocked/ips", response_model=list[schemas.IPAddress], dependencies=[Depends(get_api_key)], summary="Get Blocked IPs", description="Retrieve a list of all blocked IP addresses.")
 async def get_blocked_ips(db: Session = Depends(get_db)):
     return crud.get_blocked_ips(db)
 
@@ -124,20 +125,33 @@ async def get_public_blocked_pubkeys(db: Session = Depends(get_db)):
     return [pubkey.pubkey for pubkey in blocked_pubkeys]
 
 @app.post("/blacklist/words", dependencies=[Depends(get_api_key)], summary="Add Blacklisted Word", description="Add a new word or sentence to the blacklist.")
-async def add_blacklisted_word(word: str, db: Session = Depends(get_db)):
+async def add_blacklisted_word(word_data: schemas.WordCreate, db: Session = Depends(get_db)):
+    word = word_data.word
     return crud.add_blacklisted_word(db, word)
 
 @app.delete("/blacklist/words", dependencies=[Depends(get_api_key)], summary="Remove Blacklisted Word", description="Remove a word or sentence from the blacklist.")
-async def remove_blacklisted_word(word: str, db: Session = Depends(get_db)):
+async def remove_blacklisted_word(word_data: dict = Body(...), db: Session = Depends(get_db)):
+    word = word_data.get("word")
+    if not word:
+        raise HTTPException(status_code=400, detail="Word is required")
     return crud.remove_blacklisted_word(db, word)
 
 @app.post("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Add Blocked IP", description="Add a new IP address to the blocked list.")
-async def add_blocked_ip(ip: str, ban_reason: str = None, db: Session = Depends(get_db)):
+async def add_blocked_ip(ip_data: dict = Body(...), db: Session = Depends(get_db)):
+    ip = ip_data.get("ip")
+    ban_reason = ip_data.get("ban_reason")
+    if not ip:
+        raise HTTPException(status_code=400, detail="IP address is required")
     return crud.add_blocked_ip(db, ip, ban_reason)
 
 @app.delete("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Remove Blocked IP", description="Remove an IP address from the blocked list.")
 async def remove_blocked_ip(ip: str, db: Session = Depends(get_db)):
     return crud.remove_blocked_ip(db, ip)
+
+@app.get("/public/blocked/words", summary="Get Public List of Blocked Words", description="Retrieve a public list of all blocked words.")
+async def get_public_blocked_words(db: Session = Depends(get_db)):
+    blocked_words = crud.get_blocked_words(db)
+    return [word.word for word in blocked_words]
 
 if __name__ == "__main__":
     import uvicorn

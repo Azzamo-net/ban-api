@@ -117,13 +117,13 @@ def remove_ban_reason(db: SessionLocal, pubkey: str):
 def add_blacklisted_word(db: SessionLocal, word: str):
     existing_word = db.query(Word).filter(Word.word == word).first()
     if existing_word:
-        raise HTTPException(status_code=400, detail="Word already blacklisted")
+        return {"message": "Word already blacklisted", "status": "already_blacklisted"}
     
     db_word = Word(word=word, timestamp=datetime.utcnow())
     db.add(db_word)
     db.commit()
     db.refresh(db_word)
-    return db_word
+    return {"message": "Word successfully blacklisted", "status": "blacklisted", "word": db_word.word}
 
 def remove_blacklisted_word(db: SessionLocal, word: str):
     db_word = db.query(Word).filter(Word.word == word).first()
@@ -151,5 +151,8 @@ def remove_blocked_ip(db: SessionLocal, ip: str):
         db.commit()
         return {"message": "IP address removed from blacklist"}
     raise HTTPException(status_code=404, detail="IP address not found")
+
+def get_blocked_words(db: SessionLocal):
+    return db.query(Word).all()
 
 # ... other CRUD operations ... 

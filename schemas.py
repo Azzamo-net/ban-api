@@ -33,12 +33,12 @@ class PublicKey(PublicKeyBase):
 class WordBase(BaseModel):
     word: str
 
-class WordCreate(WordBase):
-    pass
+class WordCreate(BaseModel):
+    word: str
 
 class Word(WordBase):
     id: int
-    timestamp: str
+    timestamp: datetime
 
     class Config:
         orm_mode = True
