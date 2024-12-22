@@ -8,7 +8,7 @@ class PublicKeyCreate(PublicKeyBase):
     ban_reason: str | None = None
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "pubkey": "npub1examplepublickey",
                 "ban_reason": "Violation of terms"

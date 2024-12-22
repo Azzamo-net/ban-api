@@ -1,3 +1,5 @@
+from database import SessionLocal  # Add this line
+
 # Utility functions for file synchronization and temporary ban management 
 
 import os
