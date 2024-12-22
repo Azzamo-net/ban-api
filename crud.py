@@ -157,15 +157,17 @@ def get_blocked_words(db: SessionLocal):
     return db.query(Word).all()
 
 def add_moderator(db: SessionLocal, name: str, private_key: str):
+    # Check if a moderator with the same name already exists
     existing_moderator = db.query(Moderator).filter(Moderator.name == name).first()
     if existing_moderator:
-        raise HTTPException(status_code=400, detail="Moderator already exists")
-    
+        return {"message": "Moderator with this name already exists", "status": "already_exists"}
+
+    # Add the new moderator
     db_moderator = Moderator(name=name, private_key=private_key, timestamp=datetime.utcnow())
     db.add(db_moderator)
     db.commit()
     db.refresh(db_moderator)
-    return db_moderator
+    return {"message": "Moderator added successfully", "status": "added", "name": db_moderator.name}
 
 def remove_moderator(db: SessionLocal, name: str):
     db_moderator = db.query(Moderator).filter(Moderator.name == name).first()
