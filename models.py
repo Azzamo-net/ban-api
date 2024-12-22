@@ -35,4 +35,12 @@ class Moderator(Base):
     private_key = Column(String, unique=True)
     timestamp = Column(DateTime)
 
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    action = Column(String)
+    timestamp = Column(DateTime)
+    moderator_name = Column(String)
+    details = Column(String)
+
 # ... other models ... 
