@@ -41,7 +41,7 @@ class Word(WordBase):
     timestamp: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class IPAddressBase(BaseModel):
     ip: str
@@ -54,7 +54,7 @@ class IPAddress(IPAddressBase):
     timestamp: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TempBanCreate(BaseModel):
     pubkey: str
@@ -62,7 +62,7 @@ class TempBanCreate(BaseModel):
     ban_reason: str | None = None
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "pubkey": "npub1examplepublickey",
                 "duration": 24,
