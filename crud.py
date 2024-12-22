@@ -1,5 +1,5 @@
 from database import SessionLocal
-from models import PublicKey, TempBan, Word, IPAddress
+from models import PublicKey, TempBan, Word, IPAddress, Moderator
 from schemas import PublicKeyCreate, TempBanCreate
 from datetime import datetime, timedelta
 from pynostr.key import PublicKey as NostrPublicKey
@@ -94,11 +94,12 @@ def check_pubkey_status(db: SessionLocal, pubkey: str):
 
     return {"status": "not_blocked"}
 
-def update_ban_reason(db: SessionLocal, pubkey: str, reason: str):
+def update_ban_reason(db: SessionLocal, pubkey: str, reason: str, moderator_name: str):
     hex_pubkey = convert_npub_to_hex(pubkey) if pubkey.startswith("npub") else pubkey
     db_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == hex_pubkey).first()
     if db_pubkey:
         db_pubkey.ban_reason = reason
+        db_pubkey.moderator_name = moderator_name
         db.commit()
         db.refresh(db_pubkey)
         return db_pubkey
@@ -154,5 +155,27 @@ def remove_blocked_ip(db: SessionLocal, ip: str):
 
 def get_blocked_words(db: SessionLocal):
     return db.query(Word).all()
+
+def add_moderator(db: SessionLocal, name: str, private_key: str):
+    existing_moderator = db.query(Moderator).filter(Moderator.name == name).first()
+    if existing_moderator:
+        raise HTTPException(status_code=400, detail="Moderator already exists")
+    
+    db_moderator = Moderator(name=name, private_key=private_key, timestamp=datetime.utcnow())
+    db.add(db_moderator)
+    db.commit()
+    db.refresh(db_moderator)
+    return db_moderator
+
+def remove_moderator(db: SessionLocal, name: str):
+    db_moderator = db.query(Moderator).filter(Moderator.name == name).first()
+    if db_moderator:
+        db.delete(db_moderator)
+        db.commit()
+        return {"message": "Moderator removed"}
+    raise HTTPException(status_code=404, detail="Moderator not found")
+
+def list_moderators(db: SessionLocal):
+    return db.query(Moderator).all()
 
 # ... other CRUD operations ... 

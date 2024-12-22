@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends, Request, Body
+from fastapi import FastAPI, HTTPException, Depends, Request, Body, Header
 from sqlalchemy.orm import Session
 import models, crud, schemas, database, utils
 from database import engine, SessionLocal
@@ -46,8 +46,16 @@ async def get_blocked_ips(db: Session = Depends(get_db)):
     return crud.get_blocked_ips(db)
 
 @app.get("/blocked/pubkeys/status", summary="Check Public Key Status", description="Check if a public key is blocked and if it is temporarily banned.")
-async def check_pubkey_status(pubkey: str, db: Session = Depends(get_db)):
-    return crud.check_pubkey_status(db, pubkey)
+async def check_pubkey_status(pubkey: str, db: Session = Depends(get_db), api_key: str = Header(None)):
+    status_info = crud.check_pubkey_status(db, pubkey)
+    
+    # If an API key is provided, include the moderator information
+    if api_key:
+        blocked_pubkey = db.query(models.PublicKey).filter(models.PublicKey.pubkey == pubkey).first()
+        if blocked_pubkey and blocked_pubkey.moderator_name:
+            status_info["moderator"] = blocked_pubkey.moderator_name
+    
+    return status_info
 
 # Administrative Endpoints
 @app.post("/blocked/pubkeys", response_model=dict, dependencies=[Depends(get_api_key)], summary="Add Blocked Public Key", description="Add a new public key to the blocked list.")
@@ -152,6 +160,18 @@ async def remove_blocked_ip(ip: str, db: Session = Depends(get_db)):
 async def get_public_blocked_words(db: Session = Depends(get_db)):
     blocked_words = crud.get_blocked_words(db)
     return [word.word for word in blocked_words]
+
+@app.post("/moderators", dependencies=[Depends(get_api_key)], summary="Add Moderator")
+async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db)):
+    return crud.add_moderator(db, moderator.name, moderator.private_key)
+
+@app.delete("/moderators", dependencies=[Depends(get_api_key)], summary="Remove Moderator")
+async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db)):
+    return crud.remove_moderator(db, moderator.name)
+
+@app.get("/moderators", dependencies=[Depends(get_api_key)], summary="List Moderators")
+async def list_moderators(db: Session = Depends(get_db)):
+    return crud.list_moderators(db)
 
 if __name__ == "__main__":
     import uvicorn
