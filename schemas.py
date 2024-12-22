@@ -70,4 +70,11 @@ class TempBanCreate(BaseModel):
             }
         }
 
+class ModeratorCreate(BaseModel):
+    name: str
+    private_key: str
+
+class ModeratorDelete(BaseModel):
+    name: str
+
 # ... other schemas ... 

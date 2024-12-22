@@ -28,4 +28,11 @@ class TempBan(Base):
     pubkey = Column(String, unique=True, index=True)
     expiry_timestamp = Column(DateTime)
 
+class Moderator(Base):
+    __tablename__ = "moderators"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    private_key = Column(String, unique=True)
+    timestamp = Column(DateTime)
+
 # ... other models ... 

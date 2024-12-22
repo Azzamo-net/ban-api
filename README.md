@@ -8,6 +8,7 @@ Azzamo Banlist API is a FastAPI-based service for managing a list of blocked pub
 - **IP Address Management**: Add and remove IP addresses with optional ban reasons.
 - **Word Blacklisting**: Add and remove blacklisted words or phrases.
 - **Temporary Bans**: Temporarily ban public keys for a specified duration.
+- **Moderator Management**: Add, remove, and list moderator keys. Moderators can manage bans using their keys.
 - **Data Export/Import**: Export and import all blocked data to/from text files.
 - **Rate Limiting**: Apply rate limiting to all endpoints.
 - **Interactive API Documentation**: Access interactive API documentation via Swagger UI.
@@ -15,7 +16,6 @@ Azzamo Banlist API is a FastAPI-based service for managing a list of blocked pub
 ## Public Instance
 
 The public instance of the Azzamo Banlist API is available at [https://ban-api.azzamo.net](https://ban-api.azzamo.net).
-
 
 ## Installation
 
@@ -60,6 +60,7 @@ The public instance of the Azzamo Banlist API is available at [https://ban-api.a
 - **Add/Remove Blacklisted Word**: Manage blacklisted words or phrases.
 - **Temporarily Ban/Remove Temporary Ban on Public Key**: Manage temporary bans on public keys.
 - **Update/Remove Ban Reason**: Update or remove the ban reason for a public key.
+- **Add/Remove/List Moderators**: Manage moderator keys. Only accessible with the admin API key.
 
 ### Export and Import
 
@@ -76,9 +77,10 @@ The public instance of the Azzamo Banlist API is available at [https://ban-api.a
 ### Code Structure
 
 - **`main.py`**: Contains the FastAPI application and endpoint definitions.
-- **`crud.py`**: Contains CRUD operations for managing public keys, IPs, and words.
+- **`crud.py`**: Contains CRUD operations for managing public keys, IPs, words, and moderators.
 - **`models.py`**: Defines the SQLAlchemy models for the database.
 - **`schemas.py`**: Defines Pydantic models for request and response validation.
+- **`utils.py`**: Contains utility functions for file synchronization and moderator key management.
 
 ### Debugging
 

@@ -31,3 +31,9 @@ def export_all():
 def import_all():
     # Implement import logic from text files
     pass
+
+def save_moderator_keys_to_file(db: SessionLocal):
+    moderators = db.query(Moderator).all()
+    with open("lists/moderator_keys.txt", "w") as file:
+        for moderator in moderators:
+            file.write(f"{moderator.name},{moderator.private_key}\n")

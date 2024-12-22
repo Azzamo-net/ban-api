@@ -153,6 +153,18 @@ async def get_public_blocked_words(db: Session = Depends(get_db)):
     blocked_words = crud.get_blocked_words(db)
     return [word.word for word in blocked_words]
 
+@app.post("/moderators", dependencies=[Depends(get_api_key)], summary="Add Moderator")
+async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db)):
+    return crud.add_moderator(db, moderator.name, moderator.private_key)
+
+@app.delete("/moderators", dependencies=[Depends(get_api_key)], summary="Remove Moderator")
+async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db)):
+    return crud.remove_moderator(db, moderator.name)
+
+@app.get("/moderators", dependencies=[Depends(get_api_key)], summary="List Moderators")
+async def list_moderators(db: Session = Depends(get_db)):
+    return crud.list_moderators(db)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010))) 
