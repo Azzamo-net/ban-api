@@ -77,4 +77,9 @@ class ModeratorCreate(BaseModel):
 class ModeratorDelete(BaseModel):
     name: str
 
+class ModeratorUpdate(BaseModel):
+    name: str
+    new_name: str | None = None
+    new_private_key: str | None = None
+
 # ... other schemas ... 

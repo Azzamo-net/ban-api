@@ -173,6 +173,40 @@ async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Dep
 async def list_moderators(db: Session = Depends(get_db)):
     return crud.list_moderators(db)
 
+@app.get("/search/blocked", dependencies=[Depends(get_api_key)], summary="Search Blocked Entities", description="Search for blocked public keys, IPs, or words.")
+async def search_blocked_entities(entity_type: str, query: str, db: Session = Depends(get_db)):
+    if entity_type not in ["pubkey", "ip", "word"]:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    return crud.search_blocked_entities(db, entity_type, query)
+
+@app.post("/bulk/blocked", dependencies=[Depends(get_api_key)], summary="Bulk Add Blocked Entities", description="Bulk add public keys, IPs, or words to the blocked list.")
+async def bulk_add_blocked_entities(entity_type: str, entities: list[str], db: Session = Depends(get_db)):
+    if entity_type not in ["pubkey", "ip", "word"]:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    return crud.bulk_add_blocked_entities(db, entity_type, entities)
+
+@app.delete("/bulk/blocked", dependencies=[Depends(get_api_key)], summary="Bulk Remove Blocked Entities", description="Bulk remove public keys, IPs, or words from the blocked list.")
+async def bulk_remove_blocked_entities(entity_type: str, entities: list[str], db: Session = Depends(get_db)):
+    if entity_type not in ["pubkey", "ip", "word"]:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    return crud.bulk_remove_blocked_entities(db, entity_type, entities)
+
+@app.get("/stats", dependencies=[Depends(get_api_key)], summary="Get Statistics", description="Get statistics on blocked entities.")
+async def get_statistics(db: Session = Depends(get_db)):
+    return crud.get_statistics(db)
+
+@app.get("/temp-bans/expiring", dependencies=[Depends(get_api_key)], summary="Get Expiring Temporary Bans", description="Retrieve temporary bans expiring within a specified timeframe.")
+async def get_expiring_temp_bans(hours: int, db: Session = Depends(get_db)):
+    return crud.get_expiring_temp_bans(db, hours)
+
+@app.patch("/moderators", dependencies=[Depends(get_api_key)], summary="Update Moderator Information", description="Update the name or private key of an existing moderator.")
+async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db)):
+    return crud.update_moderator_info(db, moderator.name, moderator.new_name, moderator.new_private_key)
+
+@app.get("/audit-logs", dependencies=[Depends(get_api_key)], summary="Audit Logs", description="Retrieve logs of all actions performed by moderators.")
+async def get_audit_logs(db: Session = Depends(get_db)):
+    return crud.get_audit_logs(db)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010))) 
