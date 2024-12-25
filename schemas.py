@@ -113,6 +113,6 @@ class AuditLog(BaseModel):
     performed_by: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # ... other schemas ... 
