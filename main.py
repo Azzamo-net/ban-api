@@ -157,17 +157,22 @@ async def get_public_blocked_words(db: Session = Depends(get_db)):
     blocked_words = crud.get_blocked_words(db)
     return [word.word for word in blocked_words]
 
-@app.post("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Add Moderator", tags=["Moderator Management"])
+# Moderator Management
+@app.post("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Add Moderator (Admin Only)", description="Add a new moderator. Requires admin API key.", tags=["Moderator Management"])
 async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db)):
     return crud.add_moderator(db, moderator.name, moderator.private_key)
 
-@app.delete("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Remove Moderator", tags=["Moderator Management"])
+@app.delete("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Remove Moderator (Admin Only)", description="Remove a moderator. Requires admin API key.", tags=["Moderator Management"])
 async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db)):
     return crud.remove_moderator(db, moderator.name)
 
-@app.get("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="List Moderators", tags=["Moderator Management"])
+@app.get("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="List Moderators (Admin Only)", description="List all moderators. Requires admin API key.", tags=["Moderator Management"])
 async def list_moderators(db: Session = Depends(get_db)):
     return crud.list_moderators(db)
+
+@app.patch("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Update Moderator Information (Admin Only)", description="Update the name or private key of an existing moderator. Requires admin API key.", tags=["Moderator Management"])
+async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db)):
+    return crud.update_moderator_info(db, moderator.name, moderator.new_name, moderator.new_private_key)
 
 @app.get("/search/blocked", dependencies=[Depends(get_api_key)], summary="Search Blocked Entities", description="Search for blocked public keys, IPs, or words.")
 async def search_blocked_entities(entity_type: str, query: str, db: Session = Depends(get_db)):
@@ -194,10 +199,6 @@ async def get_statistics(db: Session = Depends(get_db)):
 @app.get("/temp-bans/expiring", dependencies=[Depends(get_api_key)], summary="Get Expiring Temporary Bans", description="Retrieve temporary bans expiring within a specified timeframe.", tags=["Temporary Bans"])
 async def get_expiring_temp_bans(hours: int, db: Session = Depends(get_db)):
     return crud.get_expiring_temp_bans(db, hours)
-
-@app.patch("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Update Moderator Information", description="Update the name or private key of an existing moderator.", tags=["Moderator Management"])
-async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db)):
-    return crud.update_moderator_info(db, moderator.name, moderator.new_name, moderator.new_private_key)
 
 @app.get("/audit-logs", dependencies=[Depends(get_api_key)], summary="Audit Logs", description="Retrieve logs of all actions performed by moderators.", tags=["Audit Logs"])
 async def get_audit_logs(db: Session = Depends(get_db)):
@@ -238,6 +239,10 @@ async def get_all_reports(db: Session = Depends(get_db)):
 @app.get("/reports/successful", response_model=list[schemas.UserReport], summary="Get Successful Reports", description="Retrieve all successfully reported and banned users.", tags=["User Reports"])
 async def get_successful_reports(db: Session = Depends(get_db)):
     return crud.get_successful_reports(db)
+
+@app.get("/test-admin", dependencies=[Depends(lambda: get_api_key(admin_only=True))])
+async def test_admin():
+    return {"message": "Admin access granted"}
 
 if __name__ == "__main__":
     import uvicorn
