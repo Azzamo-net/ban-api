@@ -106,4 +106,13 @@ class UserReport(BaseModel):
     class Config:
         orm_mode = True
 
+class AuditLog(BaseModel):
+    id: int
+    action: str
+    timestamp: datetime
+    performed_by: str
+
+    class Config:
+        orm_mode = True
+
 # ... other schemas ... 
