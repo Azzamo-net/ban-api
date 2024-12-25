@@ -1,6 +1,6 @@
 from database import SessionLocal
-from models import PublicKey, TempBan, Word, IPAddress, Moderator, AuditLog
-from schemas import PublicKeyCreate, TempBanCreate
+from models import PublicKey, TempBan, Word, IPAddress, Moderator, AuditLog, UserReport
+from schemas import PublicKeyCreate, TempBanCreate, UserReportCreate, UserReportUpdate
 from datetime import datetime, timedelta
 from pynostr.key import PublicKey as NostrPublicKey
 from fastapi import HTTPException
@@ -244,5 +244,29 @@ def update_moderator_info(db: SessionLocal, name: str, new_name: str = None, new
 def get_audit_logs(db: SessionLocal):
     # Assuming you have an AuditLog model
     return db.query(AuditLog).all()
+
+def create_user_report(db: SessionLocal, report: UserReportCreate):
+    db_report = UserReport(**report.dict())
+    db.add(db_report)
+    db.commit()
+    db.refresh(db_report)
+    return db_report
+
+def update_user_report(db: SessionLocal, report_update: UserReportUpdate):
+    db_report = db.query(UserReport).filter(UserReport.id == report_update.id).first()
+    if db_report:
+        db_report.status = report_update.status
+        db_report.handled_by = report_update.handled_by
+        db_report.action_taken = report_update.action_taken
+        db.commit()
+        db.refresh(db_report)
+        return db_report
+    raise HTTPException(status_code=404, detail="Report not found")
+
+def get_user_reports(db: SessionLocal, pubkey: str):
+    return db.query(UserReport).filter(UserReport.pubkey == pubkey).all()
+
+def get_recent_activity(db: SessionLocal):
+    return db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(10).all()
 
 # ... other CRUD operations ... 

@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from database import Base
+from datetime import datetime
 
 class PublicKey(Base):
     __tablename__ = "blocked_pubkeys"
@@ -20,7 +22,7 @@ class IPAddress(Base):
     id = Column(Integer, primary_key=True, index=True)
     ip = Column(String, unique=True, index=True)
     timestamp = Column(DateTime)
-    ban_reason = Column(String, nullable=True)
+    ban_reason = Column(String)
 
 class TempBan(Base):
     __tablename__ = "temp_bans"
@@ -42,5 +44,16 @@ class AuditLog(Base):
     timestamp = Column(DateTime)
     moderator_name = Column(String)
     details = Column(String)
+
+class UserReport(Base):
+    __tablename__ = "user_reports"
+    id = Column(Integer, primary_key=True, index=True)
+    pubkey = Column(String, index=True)
+    report_reason = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    status = Column(String, default="Pending")
+    reported_by = Column(String, index=True)
+    handled_by = Column(String, nullable=True)
+    action_taken = Column(String, nullable=True)
 
 # ... other models ... 

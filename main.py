@@ -207,6 +207,22 @@ async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session 
 async def get_audit_logs(db: Session = Depends(get_db)):
     return crud.get_audit_logs(db)
 
+@app.post("/reports", response_model=schemas.UserReport, summary="Create User Report", description="Report a public key with a reason.")
+async def create_report(report: schemas.UserReportCreate, db: Session = Depends(get_db)):
+    return crud.create_user_report(db, report)
+
+@app.patch("/reports", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Update User Report", description="Update the status of a user report.")
+async def update_report(report_update: schemas.UserReportUpdate, db: Session = Depends(get_db)):
+    return crud.update_user_report(db, report_update)
+
+@app.get("/reports/{pubkey}", response_model=list[schemas.UserReport], summary="Get User Reports", description="Retrieve reports for a specific public key.")
+async def get_reports(pubkey: str, db: Session = Depends(get_db)):
+    return crud.get_user_reports(db, pubkey)
+
+@app.get("/recent-activity", dependencies=[Depends(get_api_key)], response_model=list[schemas.AuditLog], summary="Get Recent Activity", description="Retrieve recent actions performed by moderators.")
+async def recent_activity(db: Session = Depends(get_db)):
+    return crud.get_recent_activity(db)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010))) 

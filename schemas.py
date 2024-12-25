@@ -82,4 +82,25 @@ class ModeratorUpdate(BaseModel):
     new_name: str | None = None
     new_private_key: str | None = None
 
+class UserReportCreate(BaseModel):
+    pubkey: str
+    report_reason: str
+    reported_by: str
+
+class UserReportUpdate(BaseModel):
+    id: int
+    status: str
+    handled_by: str
+    action_taken: str | None = None
+
+class UserReport(BaseModel):
+    id: int
+    pubkey: str
+    report_reason: str
+    timestamp: datetime
+    status: str
+    reported_by: str
+    handled_by: str | None
+    action_taken: str | None
+
 # ... other schemas ... 
