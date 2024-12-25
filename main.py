@@ -248,6 +248,8 @@ async def test_admin(x_api_key: str = Header(...)):
 async def test_admin_simple(x_api_key: str = Header(...)):
     return {"message": "Admin access granted"}
 
+print(f"Loaded ADMIN_API_KEY: {os.getenv('ADMIN_API_KEY')}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010))) 
