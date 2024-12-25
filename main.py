@@ -91,13 +91,6 @@ async def import_all():
     utils.import_all()
     return {"message": "Data imported"}
 
-# Apply rate limiting to all endpoints
-@app.middleware("http")
-async def rate_limit_middleware(request: Request, call_next):
-    rate_limit(request)
-    response = await call_next(request)
-    return response
-
 # Custom exception handler for HTTPException
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
