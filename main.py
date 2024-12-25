@@ -159,19 +159,19 @@ async def get_public_blocked_words(db: Session = Depends(get_db)):
 
 # Moderator Management
 @app.post("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Add Moderator (Admin Only)", description="Add a new moderator. Requires admin API key.", tags=["Moderator Management"])
-async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db)):
+async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db), x_api_key: str = Header(...)):
     return crud.add_moderator(db, moderator.name, moderator.private_key)
 
 @app.delete("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Remove Moderator (Admin Only)", description="Remove a moderator. Requires admin API key.", tags=["Moderator Management"])
-async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db)):
+async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db), x_api_key: str = Header(...)):
     return crud.remove_moderator(db, moderator.name)
 
 @app.get("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="List Moderators (Admin Only)", description="List all moderators. Requires admin API key.", tags=["Moderator Management"])
-async def list_moderators(db: Session = Depends(get_db)):
+async def list_moderators(db: Session = Depends(get_db), x_api_key: str = Header(...)):
     return crud.list_moderators(db)
 
 @app.patch("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Update Moderator Information (Admin Only)", description="Update the name or private key of an existing moderator. Requires admin API key.", tags=["Moderator Management"])
-async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db)):
+async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db), x_api_key: str = Header(...)):
     return crud.update_moderator_info(db, moderator.name, moderator.new_name, moderator.new_private_key)
 
 @app.get("/search/blocked", dependencies=[Depends(get_api_key)], summary="Search Blocked Entities", description="Search for blocked public keys, IPs, or words.")
