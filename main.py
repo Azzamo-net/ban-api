@@ -32,7 +32,7 @@ def get_db():
         db.close()
 
 # Public Endpoints
-@app.get("/blocked/pubkeys", response_model=list[schemas.PublicKey], summary="Get Blocked Public Keys", description="Retrieve a list of all blocked public keys.")
+@app.get("/blocked/pubkeys", response_model=list[schemas.PublicKey], summary="Get Blocked Public Keys", description="Retrieve a list of all blocked public keys.", tags=["Public"])
 async def get_blocked_pubkeys(db: Session = Depends(get_db)):
     try:
         return crud.get_blocked_pubkeys(db)
@@ -123,24 +123,24 @@ async def update_ban_reason(pubkey: str, reason: str, db: Session = Depends(get_
 async def remove_ban_reason(pubkey: str, db: Session = Depends(get_db)):
     return crud.remove_ban_reason(db, pubkey)
 
-@app.get("/public/blocked/pubkeys", summary="Get Public List of Blocked Public Keys", description="Retrieve a public list of all blocked public keys.")
+@app.get("/public/blocked/pubkeys", summary="Get Public List of Blocked Public Keys", description="Retrieve a public list of all blocked public keys.", tags=["Public"])
 async def get_public_blocked_pubkeys(db: Session = Depends(get_db)):
     blocked_pubkeys = crud.get_blocked_pubkeys(db)
     return [pubkey.pubkey for pubkey in blocked_pubkeys]
 
-@app.post("/blacklist/words", dependencies=[Depends(get_api_key)], summary="Add Blacklisted Word", description="Add a new word or sentence to the blacklist.")
+@app.post("/blacklist/words", dependencies=[Depends(get_api_key)], summary="Add Blacklisted Word", description="Add a new word or sentence to the blacklist.", tags=["Word Blacklisting"])
 async def add_blacklisted_word(word_data: schemas.WordCreate, db: Session = Depends(get_db)):
     word = word_data.word
     return crud.add_blacklisted_word(db, word)
 
-@app.delete("/blacklist/words", dependencies=[Depends(get_api_key)], summary="Remove Blacklisted Word", description="Remove a word or sentence from the blacklist.")
+@app.delete("/blacklist/words", dependencies=[Depends(get_api_key)], summary="Remove Blacklisted Word", description="Remove a word or sentence from the blacklist.", tags=["Word Blacklisting"])
 async def remove_blacklisted_word(word_data: dict = Body(...), db: Session = Depends(get_db)):
     word = word_data.get("word")
     if not word:
         raise HTTPException(status_code=400, detail="Word is required")
     return crud.remove_blacklisted_word(db, word)
 
-@app.post("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Add Blocked IP", description="Add a new IP address to the blocked list.")
+@app.post("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Add Blocked IP", description="Add a new IP address to the blocked list.", tags=["IP Management"])
 async def add_blocked_ip(ip_data: dict = Body(...), db: Session = Depends(get_db)):
     ip = ip_data.get("ip")
     ban_reason = ip_data.get("ban_reason")
@@ -148,24 +148,24 @@ async def add_blocked_ip(ip_data: dict = Body(...), db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail="IP address is required")
     return crud.add_blocked_ip(db, ip, ban_reason)
 
-@app.delete("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Remove Blocked IP", description="Remove an IP address from the blocked list.")
+@app.delete("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Remove Blocked IP", description="Remove an IP address from the blocked list.", tags=["IP Management"])
 async def remove_blocked_ip(ip: str, db: Session = Depends(get_db)):
     return crud.remove_blocked_ip(db, ip)
 
-@app.get("/public/blocked/words", summary="Get Public List of Blocked Words", description="Retrieve a public list of all blocked words.")
+@app.get("/public/blocked/words", summary="Get Public List of Blocked Words", description="Retrieve a public list of all blocked words.", tags=["Public"])
 async def get_public_blocked_words(db: Session = Depends(get_db)):
     blocked_words = crud.get_blocked_words(db)
     return [word.word for word in blocked_words]
 
-@app.post("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Add Moderator")
+@app.post("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Add Moderator", tags=["Moderator Management"])
 async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db)):
     return crud.add_moderator(db, moderator.name, moderator.private_key)
 
-@app.delete("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Remove Moderator")
+@app.delete("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Remove Moderator", tags=["Moderator Management"])
 async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db)):
     return crud.remove_moderator(db, moderator.name)
 
-@app.get("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="List Moderators")
+@app.get("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="List Moderators", tags=["Moderator Management"])
 async def list_moderators(db: Session = Depends(get_db)):
     return crud.list_moderators(db)
 
@@ -175,43 +175,43 @@ async def search_blocked_entities(entity_type: str, query: str, db: Session = De
         raise HTTPException(status_code=400, detail="Invalid entity type")
     return crud.search_blocked_entities(db, entity_type, query)
 
-@app.post("/bulk/blocked", dependencies=[Depends(get_api_key)], summary="Bulk Add Blocked Entities", description="Bulk add public keys, IPs, or words to the blocked list.")
+@app.post("/bulk/blocked", dependencies=[Depends(get_api_key)], summary="Bulk Add Blocked Entities", description="Bulk add public keys, IPs, or words to the blocked list.", tags=["Bulk Operations"])
 async def bulk_add_blocked_entities(entity_type: str, entities: list[str], db: Session = Depends(get_db)):
     if entity_type not in ["pubkey", "ip", "word"]:
         raise HTTPException(status_code=400, detail="Invalid entity type")
     return crud.bulk_add_blocked_entities(db, entity_type, entities)
 
-@app.delete("/bulk/blocked", dependencies=[Depends(get_api_key)], summary="Bulk Remove Blocked Entities", description="Bulk remove public keys, IPs, or words from the blocked list.")
+@app.delete("/bulk/blocked", dependencies=[Depends(get_api_key)], summary="Bulk Remove Blocked Entities", description="Bulk remove public keys, IPs, or words from the blocked list.", tags=["Bulk Operations"])
 async def bulk_remove_blocked_entities(entity_type: str, entities: list[str], db: Session = Depends(get_db)):
     if entity_type not in ["pubkey", "ip", "word"]:
         raise HTTPException(status_code=400, detail="Invalid entity type")
     return crud.bulk_remove_blocked_entities(db, entity_type, entities)
 
-@app.get("/stats", dependencies=[Depends(get_api_key)], summary="Get Statistics", description="Get statistics on blocked entities.")
+@app.get("/stats", dependencies=[Depends(get_api_key)], summary="Get Statistics", description="Get statistics on blocked entities.", tags=["Statistics"])
 async def get_statistics(db: Session = Depends(get_db)):
     return crud.get_statistics(db)
 
-@app.get("/temp-bans/expiring", dependencies=[Depends(get_api_key)], summary="Get Expiring Temporary Bans", description="Retrieve temporary bans expiring within a specified timeframe.")
+@app.get("/temp-bans/expiring", dependencies=[Depends(get_api_key)], summary="Get Expiring Temporary Bans", description="Retrieve temporary bans expiring within a specified timeframe.", tags=["Temporary Bans"])
 async def get_expiring_temp_bans(hours: int, db: Session = Depends(get_db)):
     return crud.get_expiring_temp_bans(db, hours)
 
-@app.patch("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Update Moderator Information", description="Update the name or private key of an existing moderator.")
+@app.patch("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Update Moderator Information", description="Update the name or private key of an existing moderator.", tags=["Moderator Management"])
 async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db)):
     return crud.update_moderator_info(db, moderator.name, moderator.new_name, moderator.new_private_key)
 
-@app.get("/audit-logs", dependencies=[Depends(get_api_key)], summary="Audit Logs", description="Retrieve logs of all actions performed by moderators.")
+@app.get("/audit-logs", dependencies=[Depends(get_api_key)], summary="Audit Logs", description="Retrieve logs of all actions performed by moderators.", tags=["Audit Logs"])
 async def get_audit_logs(db: Session = Depends(get_db)):
     return crud.get_audit_logs(db)
 
-@app.post("/reports", response_model=schemas.UserReport, summary="Create User Report", description="Report a public key with a reason.")
+@app.post("/reports", response_model=schemas.UserReport, summary="Create User Report", description="Report a public key with a reason.", tags=["User Reports"])
 async def create_report(report: schemas.UserReportCreate, db: Session = Depends(get_db)):
     return crud.create_user_report(db, report)
 
-@app.patch("/reports", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Update User Report", description="Update the status of a user report.")
+@app.patch("/reports", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Update User Report", description="Update the status of a user report.", tags=["User Reports"])
 async def update_report(report_update: schemas.UserReportUpdate, db: Session = Depends(get_db)):
     return crud.update_user_report(db, report_update)
 
-@app.get("/reports/{pubkey}", response_model=list[schemas.UserReport], summary="Get User Reports", description="Retrieve reports for a specific public key.")
+@app.get("/reports/{pubkey}", response_model=list[schemas.UserReport], summary="Get User Reports", description="Retrieve reports for a specific public key.", tags=["User Reports"])
 async def get_reports(pubkey: str, db: Session = Depends(get_db)):
     return crud.get_user_reports(db, pubkey)
 
@@ -225,17 +225,17 @@ async def approve_report(report_id: int, db: Session = Depends(get_db), moderato
     return crud.approve_report(db, report_id, moderator_name)
 
 # Public endpoint to get pending reports
-@app.get("/reports/pending", response_model=list[schemas.UserReport], summary="Get Pending Reports", description="Retrieve all pending user reports.")
+@app.get("/reports/pending", response_model=list[schemas.UserReport], summary="Get Pending Reports", description="Retrieve all pending user reports.", tags=["User Reports"])
 async def get_pending_reports(db: Session = Depends(get_db)):
     return crud.get_pending_reports(db)
 
 # Public endpoint to get all reports
-@app.get("/reports/all", response_model=list[schemas.UserReport], summary="Get All Reports", description="Retrieve all user reports.")
+@app.get("/reports/all", response_model=list[schemas.UserReport], summary="Get All Reports", description="Retrieve all user reports.", tags=["User Reports"])
 async def get_all_reports(db: Session = Depends(get_db)):
     return crud.get_all_reports(db)
 
 # Public endpoint to get successful reports
-@app.get("/reports/successful", response_model=list[schemas.UserReport], summary="Get Successful Reports", description="Retrieve all successfully reported and banned users.")
+@app.get("/reports/successful", response_model=list[schemas.UserReport], summary="Get Successful Reports", description="Retrieve all successfully reported and banned users.", tags=["User Reports"])
 async def get_successful_reports(db: Session = Depends(get_db)):
     return crud.get_successful_reports(db)
 
