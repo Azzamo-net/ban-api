@@ -241,7 +241,11 @@ async def get_successful_reports(db: Session = Depends(get_db)):
     return crud.get_successful_reports(db)
 
 @app.get("/test-admin", dependencies=[Depends(lambda: get_api_key(admin_only=True))])
-async def test_admin():
+async def test_admin(x_api_key: str = Header(...)):
+    return {"message": "Admin access granted"}
+
+@app.get("/test-admin-simple", dependencies=[Depends(lambda: get_api_key(admin_only=True))])
+async def test_admin_simple(x_api_key: str = Header(...)):
     return {"message": "Admin access granted"}
 
 if __name__ == "__main__":
