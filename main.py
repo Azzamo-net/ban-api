@@ -195,7 +195,7 @@ async def get_statistics(db: Session = Depends(get_db)):
 async def get_expiring_temp_bans(hours: int, db: Session = Depends(get_db)):
     return crud.get_expiring_temp_bans(db, hours)
 
-@app.patch("/moderators", dependencies=[Depends(get_api_key)], summary="Update Moderator Information", description="Update the name or private key of an existing moderator.")
+@app.patch("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Update Moderator Information", description="Update the name or private key of an existing moderator.")
 async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db)):
     return crud.update_moderator_info(db, moderator.name, moderator.new_name, moderator.new_private_key)
 
