@@ -5,7 +5,7 @@ import models, crud, schemas, database, utils
 from database import engine, SessionLocal
 from dotenv import load_dotenv
 from dependencies import get_api_key
-from rate_limit import rate_limit, RateLimitMiddleware
+from rate_limit import RateLimitMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
