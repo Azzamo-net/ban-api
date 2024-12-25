@@ -269,4 +269,38 @@ def get_user_reports(db: SessionLocal, pubkey: str):
 def get_recent_activity(db: SessionLocal):
     return db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(10).all()
 
+def approve_report(db: SessionLocal, report_id: int, moderator_name: str):
+    # Fetch the report
+    report = db.query(UserReport).filter(UserReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Ban the user
+    pubkey = report.pubkey
+    existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == pubkey).first()
+    if existing_pubkey:
+        if not existing_pubkey.ban_reason:
+            existing_pubkey.ban_reason = report.report_reason
+        existing_pubkey.moderator_name = moderator_name
+    else:
+        db_pubkey = PublicKey(pubkey=pubkey, npub=pubkey, timestamp=datetime.utcnow(), ban_reason=report.report_reason)
+        db.add(db_pubkey)
+
+    # Update report status
+    report.status = "Approved"
+    report.handled_by = moderator_name
+    report.action_taken = "Banned"
+    db.commit()
+    db.refresh(report)
+    return report
+
+def get_pending_reports(db: SessionLocal):
+    return db.query(UserReport).filter(UserReport.status == "Pending").all()
+
+def get_all_reports(db: SessionLocal):
+    return db.query(UserReport).all()
+
+def get_successful_reports(db: SessionLocal):
+    return db.query(UserReport).filter(UserReport.status == "Approved").all()
+
 # ... other CRUD operations ... 

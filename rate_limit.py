@@ -1,43 +1,26 @@
-from fastapi import Request, HTTPException, status
-from datetime import datetime, timedelta
-from collections import defaultdict
-import os
+from fastapi import Request, HTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+import time
 
-RATE_LIMIT = int(os.getenv("RATE_LIMIT", 100))
-RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", 300))
-RATE_LIMIT_BAN_DURATION = int(os.getenv("RATE_LIMIT_BAN_DURATION", 1260))
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, rate_limit: int):
+        super().__init__(app)
+        self.rate_limit = rate_limit
+        self.requests = {}
 
-# Store request counts and ban info
-request_counts = defaultdict(lambda: {"count": 0, "reset_time": datetime.utcnow()})
-banned_ips = {}
+    async def dispatch(self, request: Request, call_next):
+        client_ip = request.client.host
+        current_time = time.time()
 
-def rate_limit(request: Request):
-    client_ip = request.client.host
-    current_time = datetime.utcnow()
+        if client_ip not in self.requests:
+            self.requests[client_ip] = []
 
-    # Check if IP is banned
-    if client_ip in banned_ips:
-        ban_end_time = banned_ips[client_ip]
-        if current_time < ban_end_time:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many requests, you are banned temporarily.",
-            )
-        else:
-            del banned_ips[client_ip]  # Remove ban if time has passed
+        self.requests[client_ip] = [timestamp for timestamp in self.requests[client_ip] if current_time - timestamp < 60]
 
-    # Check request count
-    if current_time > request_counts[client_ip]["reset_time"]:
-        # Reset count if window has passed
-        request_counts[client_ip] = {"count": 1, "reset_time": current_time + timedelta(seconds=RATE_LIMIT_WINDOW)}
-    else:
-        request_counts[client_ip]["count"] += 1
+        if len(self.requests[client_ip]) >= self.rate_limit:
+            return Response("Too many requests", status_code=429)
 
-    if request_counts[client_ip]["count"] > RATE_LIMIT:
-        # Ban the IP
-        banned_ips[client_ip] = current_time + timedelta(seconds=RATE_LIMIT_BAN_DURATION)
-        del request_counts[client_ip]  # Reset request count
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests, you are banned temporarily.",
-        )
+        self.requests[client_ip].append(current_time)
+        response = await call_next(request)
+        return response

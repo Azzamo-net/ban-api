@@ -103,4 +103,7 @@ class UserReport(BaseModel):
     handled_by: str | None
     action_taken: str | None
 
+    class Config:
+        orm_mode = True
+
 # ... other schemas ... 

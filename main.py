@@ -5,7 +5,7 @@ import models, crud, schemas, database, utils
 from database import engine, SessionLocal
 from dotenv import load_dotenv
 from dependencies import get_api_key
-from rate_limit import rate_limit
+from rate_limit import rate_limit, RateLimitMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -13,6 +13,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 load_dotenv()
 
 app = FastAPI(title="Azzamo Banlist API")
+
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware, rate_limit=int(os.getenv("RATE_LIMIT", 100)))
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -161,15 +164,15 @@ async def get_public_blocked_words(db: Session = Depends(get_db)):
     blocked_words = crud.get_blocked_words(db)
     return [word.word for word in blocked_words]
 
-@app.post("/moderators", dependencies=[Depends(get_api_key)], summary="Add Moderator")
+@app.post("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Add Moderator")
 async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db)):
     return crud.add_moderator(db, moderator.name, moderator.private_key)
 
-@app.delete("/moderators", dependencies=[Depends(get_api_key)], summary="Remove Moderator")
+@app.delete("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Remove Moderator")
 async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db)):
     return crud.remove_moderator(db, moderator.name)
 
-@app.get("/moderators", dependencies=[Depends(get_api_key)], summary="List Moderators")
+@app.get("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="List Moderators")
 async def list_moderators(db: Session = Depends(get_db)):
     return crud.list_moderators(db)
 
@@ -219,9 +222,29 @@ async def update_report(report_update: schemas.UserReportUpdate, db: Session = D
 async def get_reports(pubkey: str, db: Session = Depends(get_db)):
     return crud.get_user_reports(db, pubkey)
 
-@app.get("/recent-activity", dependencies=[Depends(get_api_key)], response_model=list[schemas.AuditLog], summary="Get Recent Activity", description="Retrieve recent actions performed by moderators.")
+@app.get("/recent-activity", dependencies=[Depends(lambda: get_api_key(admin_only=True))], response_model=list[schemas.AuditLog], summary="Get Recent Activity", description="Retrieve recent actions performed by moderators.")
 async def recent_activity(db: Session = Depends(get_db)):
     return crud.get_recent_activity(db)
+
+# Approve a reported user and ban them
+@app.patch("/reports/approve/{report_id}", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Approve Report", description="Approve a report and ban the reported user.")
+async def approve_report(report_id: int, db: Session = Depends(get_db), moderator_name: str = Header(...)):
+    return crud.approve_report(db, report_id, moderator_name)
+
+# Public endpoint to get pending reports
+@app.get("/reports/pending", response_model=list[schemas.UserReport], summary="Get Pending Reports", description="Retrieve all pending user reports.")
+async def get_pending_reports(db: Session = Depends(get_db)):
+    return crud.get_pending_reports(db)
+
+# Public endpoint to get all reports
+@app.get("/reports/all", response_model=list[schemas.UserReport], summary="Get All Reports", description="Retrieve all user reports.")
+async def get_all_reports(db: Session = Depends(get_db)):
+    return crud.get_all_reports(db)
+
+# Public endpoint to get successful reports
+@app.get("/reports/successful", response_model=list[schemas.UserReport], summary="Get Successful Reports", description="Retrieve all successfully reported and banned users.")
+async def get_successful_reports(db: Session = Depends(get_db)):
+    return crud.get_successful_reports(db)
 
 if __name__ == "__main__":
     import uvicorn

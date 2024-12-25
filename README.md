@@ -8,8 +8,8 @@ Azzamo Banlist API is a FastAPI-based service for managing a list of blocked pub
 - **IP Address Management**: Add and remove IP addresses with optional ban reasons.
 - **Word Blacklisting**: Add and remove blacklisted words or phrases.
 - **Temporary Bans**: Temporarily ban public keys for a specified duration.
-- **Moderator Management**: Add, remove, and list moderator keys. Moderators can manage bans using their keys.
-- **User Reports**: Report public keys with reasons, update report status, and view reports.
+- **Moderator Management**: Add, remove, and list moderator keys. Moderators can manage bans and reports using their keys.
+- **User Reports**: Report public keys with reasons, update report status, approve reports, and view reports.
 - **Recent Activity**: View recent actions performed by moderators.
 - **Data Export/Import**: Export and import all blocked data to/from text files.
 - **Rate Limiting**: Apply rate limiting to all endpoints.
@@ -55,6 +55,9 @@ The public instance of the Azzamo Banlist API is available at [https://ban-api.a
 - **Get Blocked IPs**: Retrieve a list of all blocked IP addresses.
 - **Check Public Key Status**: Check if a public key is blocked and if it is temporarily banned.
 - **Create User Report**: Report a public key with a reason.
+- **Get Pending Reports**: Retrieve all pending user reports.
+- **Get All Reports**: Retrieve all user reports.
+- **Get Successful Reports**: Retrieve all successfully reported and banned users.
 
 ### Administrative Endpoints
 
@@ -64,7 +67,8 @@ The public instance of the Azzamo Banlist API is available at [https://ban-api.a
 - **Temporarily Ban/Remove Temporary Ban on Public Key**: Manage temporary bans on public keys.
 - **Update/Remove Ban Reason**: Update or remove the ban reason for a public key.
 - **Add/Remove/List Moderators**: Manage moderator keys. Only accessible with the admin API key.
-- **Update User Report**: Update the status of a user report.
+- **Update User Report**: Update the status of a user report. Accessible with moderator or admin API keys.
+- **Approve Report**: Approve a report and ban the reported user. Accessible with moderator or admin API keys.
 - **Get User Reports**: Retrieve reports for a specific public key.
 - **Get Recent Activity**: Retrieve recent actions performed by moderators.
 
