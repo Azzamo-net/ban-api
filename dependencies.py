@@ -12,7 +12,7 @@ def get_db():
     finally:
         db.close()
 
-def get_api_key(x_api_key: str = Header(...), db: Session = Depends(get_db), admin_only: bool = False):
+def get_api_key(x_api_key: str = Header(...), admin_only: bool = False, db: Session = Depends(get_db)):
     admin_key = os.getenv("ADMIN_API_KEY")
     logging.info(f"Received x-api-key: {x_api_key}")
     logging.info(f"Expected ADMIN_API_KEY: {admin_key}")
