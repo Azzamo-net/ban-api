@@ -9,6 +9,7 @@ from rate_limit import RateLimitMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from datetime import datetime
 
 load_dotenv()
 
@@ -212,9 +213,20 @@ async def get_expiring_temp_bans(hours: int, db: Session = Depends(get_db)):
 async def get_audit_logs(db: Session = Depends(get_db)):
     return crud.get_audit_logs(db)
 
-@app.post("/reports", response_model=schemas.UserReport, summary="Create User Report", description="Report a public key with a reason.", tags=["User Reports"])
+@app.post("/reports", response_model=schemas.UserReportResponse, summary="Create User Report", description="Report a public key with a reason.", tags=["User Reports"])
 async def create_report(report: schemas.UserReportCreate, db: Session = Depends(get_db)):
-    return crud.create_user_report(db, report)
+    try:
+        result = crud.create_user_report(db, report)
+        return {
+            "id": 1,  # Replace with actual ID from the database
+            "timestamp": datetime.now(),
+            "reported_by": report.reported_by,
+            "handled_by": "admin",  # Replace with actual handler
+            "action_taken": "reviewed",  # Replace with actual action
+            **result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.patch("/reports", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Update User Report", description="Update the status of a user report.", tags=["User Reports"])
 async def update_report(report_update: schemas.UserReportUpdate, db: Session = Depends(get_db)):
