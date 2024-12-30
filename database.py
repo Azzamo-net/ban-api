@@ -36,4 +36,9 @@ def backup_sqlite():
 def migrate_database():
     # Use Alembic or another migration tool to handle migrations
     # Example: subprocess.run(["alembic", "upgrade", "head"])
-    pass 
+    try:
+        # Check if tables exist and create them if they don't
+        models.Base.metadata.create_all(bind=engine)
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing database: {e}") 
