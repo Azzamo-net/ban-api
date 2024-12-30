@@ -8,6 +8,7 @@ import logging
 import requests
 import os
 from dependencies import get_api_key
+from sqlalchemy.orm import Session
 
 def convert_npub_to_hex(npub: str) -> str:
     # Convert Npub to hex using pynostr
@@ -355,9 +356,14 @@ def get_user_reports(db: SessionLocal, pubkey: str):
 def get_recent_activity(db: SessionLocal):
     return db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(10).all()
 
-def approve_report(db: SessionLocal, report_id: int, moderator_name: str):
-    # Fetch the report
-    report = db.query(UserReport).filter(UserReport.id == report_id).first()
+def approve_report(db: Session, report_data: schemas.ReportApproval):
+    report = None
+
+    if report_data.report_id:
+        report = db.query(UserReport).filter(UserReport.id == report_data.report_id).first()
+    elif report_data.pubkey:
+        report = db.query(UserReport).filter(UserReport.pubkey == report_data.pubkey).first()
+
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
@@ -367,14 +373,14 @@ def approve_report(db: SessionLocal, report_id: int, moderator_name: str):
     if existing_pubkey:
         if not existing_pubkey.ban_reason:
             existing_pubkey.ban_reason = report.report_reason
-        existing_pubkey.moderator_name = moderator_name
+        existing_pubkey.moderator_name = report_data.moderator_name
     else:
         db_pubkey = PublicKey(pubkey=pubkey, npub=pubkey, timestamp=datetime.utcnow(), ban_reason=report.report_reason)
         db.add(db_pubkey)
 
     # Update report status
     report.status = "Handled"
-    report.handled_by = moderator_name
+    report.handled_by = report_data.moderator_name
     report.action_taken = "Banned"
     db.commit()
     db.refresh(report)
