@@ -95,9 +95,11 @@ class ModeratorUpdate(BaseModel):
 
 class UserReportCreate(BaseModel):
     pubkey: str
-    report_reason: str
-    ban_reason: str = None
+    report_reason: Optional[str] = None
     reported_by: Optional[str] = None
+
+    class Config:
+        orm_mode = True
 
 class UserReportUpdate(BaseModel):
     id: int
@@ -108,12 +110,11 @@ class UserReportUpdate(BaseModel):
 class UserReport(BaseModel):
     id: int
     pubkey: str
-    report_reason: str
+    report_reason: Optional[str] = None
+    reported_by: Optional[str] = None
+    handled_by: Optional[str] = None
+    action_taken: Optional[str] = None
     timestamp: datetime
-    status: str
-    reported_by: str
-    handled_by: str | None
-    action_taken: str | None
 
     class Config:
         orm_mode = True
