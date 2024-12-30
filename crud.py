@@ -272,8 +272,14 @@ def get_audit_logs(db: SessionLocal):
 
 def create_user_report(db: SessionLocal, report: UserReportCreate):
     try:
+        # Convert npub to hex if necessary
+        if report.pubkey.startswith("npub"):
+            hex_pubkey = convert_npub_to_hex(report.pubkey)
+        else:
+            hex_pubkey = report.pubkey
+
         # Check if the public key is already reported
-        existing_report = db.query(UserReport).filter(UserReport.pubkey == report.pubkey).first()
+        existing_report = db.query(UserReport).filter(UserReport.pubkey == hex_pubkey).first()
         
         if existing_report:
             # Return a message indicating the public key is already reported
@@ -287,7 +293,7 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
         
         # Create a new report if no existing report is found
         new_report = UserReport(
-            pubkey=report.pubkey,
+            pubkey=hex_pubkey,
             report_reason=report.report_reason,
             reported_by=report.reported_by,
             timestamp=datetime.utcnow()
