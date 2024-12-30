@@ -4,7 +4,8 @@ from datetime import datetime
 class PublicKeyBase(BaseModel):
     pubkey: str
 
-class PublicKeyCreate(PublicKeyBase):
+class PublicKeyCreate(BaseModel):
+    pubkey: str
     ban_reason: str | None = None
 
     class Config:
