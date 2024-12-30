@@ -220,17 +220,12 @@ async def get_expiring_temp_bans(hours: int, db: Session = Depends(get_db)):
 async def get_audit_logs(db: Session = Depends(get_db)):
     return crud.get_audit_logs(db)
 
-@app.post("/reports", response_model=schemas.UserReportResponse, summary="Create User Report", description="Report a public key with a reason.", tags=["User Reports"])
-async def create_report(report: schemas.UserReportCreate, db: Session = Depends(get_db)):
+@app.post("/reports", response_model=schemas.UserReport, summary="Create User Report", description="Create a new user report.")
+async def create_user_report(report: schemas.UserReportCreate, db: Session = Depends(get_db)):
     try:
-        result = crud.create_user_report(db, report)
-        return result
-    except HTTPException as e:
-        logging.error(f"HTTP error occurred: {e.detail}")
-        raise e
+        return crud.create_user_report(db, report)
     except Exception as e:
-        logging.error(f"Unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.patch("/reports", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Update User Report", description="Update the status of a user report.", tags=["User Reports"])
 async def update_report(report_update: schemas.UserReportUpdate, db: Session = Depends(get_db)):
