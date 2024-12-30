@@ -252,16 +252,26 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
         existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == report.pubkey).first()
         if existing_pubkey:
             return {
+                "id": None,
+                "timestamp": None,
+                "reported_by": report.reported_by,
+                "handled_by": None,
+                "action_taken": "already_blocked",
                 "message": "Public key is already blocked",
                 "status": "already_blocked",
                 "pubkey": existing_pubkey.pubkey,
-                "ban_reason": existing_pubkey.ban_reason
+                "report_reason": report.report_reason
             }
 
         # Check if the public key is already reported
         existing_report = db.query(UserReport).filter(UserReport.pubkey == report.pubkey, UserReport.status == "Pending").first()
         if existing_report:
             return {
+                "id": existing_report.id,
+                "timestamp": existing_report.timestamp,
+                "reported_by": existing_report.reported_by,
+                "handled_by": existing_report.handled_by,
+                "action_taken": existing_report.action_taken,
                 "message": "Public key is already reported",
                 "status": "already_reported",
                 "pubkey": existing_report.pubkey,
