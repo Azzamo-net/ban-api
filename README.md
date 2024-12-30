@@ -50,27 +50,30 @@ The public instance of the Azzamo Banlist API is available at [https://ban-api.a
 
 ### Public Endpoints
 
-- **Get Blocked Public Keys**: Retrieve a list of all blocked public keys.
-- **Get Blocked Words**: Retrieve a list of all blacklisted words.
-- **Get Blocked IPs**: Retrieve a list of all blocked IP addresses.
-- **Check Public Key Status**: Check if a public key is blocked and if it is temporarily banned.
-- **Create User Report**: Report a public key with a reason.
-- **Get Pending Reports**: Retrieve all pending user reports.
-- **Get All Reports**: Retrieve all user reports.
-- **Get Successful Reports**: Retrieve all successfully reported and banned users.
+- **Get Blocked Public Keys**: `GET /blocked/pubkeys`
+- **Get Blocked Words**: `GET /blacklist/words`
+- **Get Blocked IPs**: `GET /blocked/ips`
+- **Check Public Key Status**: `GET /public/blocked/pubkeys`
+- **Create User Report**: `POST /reports`
+- **Get Pending Reports**: `GET /reports/pending`
+- **Get All Reports**: `GET /reports/all`
+- **Get Successful Reports**: `GET /reports/successful`
 
-### Administrative Endpoints
+### Moderator Endpoints
 
-- **Add/Remove Blocked Public Key**: Manage blocked public keys with optional ban reasons.
-- **Add/Remove Blocked IP**: Manage blocked IP addresses with optional ban reasons.
-- **Add/Remove Blacklisted Word**: Manage blacklisted words or phrases.
-- **Temporarily Ban/Remove Temporary Ban on Public Key**: Manage temporary bans on public keys.
-- **Update/Remove Ban Reason**: Update or remove the ban reason for a public key.
-- **Add/Remove/List Moderators**: Manage moderator keys. Only accessible with the admin API key.
-- **Update User Report**: Update the status of a user report. Accessible with moderator or admin API keys.
-- **Approve Report**: Approve a report and ban the reported user. Accessible with moderator or admin API keys.
-- **Get User Reports**: Retrieve reports for a specific public key.
-- **Get Recent Activity**: Retrieve recent actions performed by moderators.
+- **Add/Remove Blocked Public Key**: `POST /blocked/pubkeys`, `DELETE /blocked/pubkeys`
+- **Add/Remove Blocked IP**: `POST /blocked/ips`, `DELETE /blocked/ips`
+- **Add/Remove Blacklisted Word**: `POST /blacklist/words`, `DELETE /blacklist/words`
+- **Temporarily Ban/Remove Temporary Ban on Public Key**: `POST /temp-ban/pubkeys`, `DELETE /temp-ban/pubkeys`
+- **Update/Remove Ban Reason**: `PATCH /blocked/pubkeys/ban-reason`, `DELETE /blocked/pubkeys/ban-reason`
+- **Update User Report**: `PATCH /reports`
+- **Approve Report**: `PATCH /reports/approve`
+- **Get User Reports**: `GET /reports/{pubkey}`
+
+### Admin Endpoints
+
+- **Add/Remove/List Moderators**: `POST /moderators`, `DELETE /moderators`, `GET /moderators`
+- **Get Recent Activity**: `GET /recent-activity`
 
 ### Export and Import
 
