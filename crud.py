@@ -7,6 +7,7 @@ from fastapi import HTTPException, Depends
 import logging
 import requests
 import os
+from dependencies import get_api_key
 
 def convert_npub_to_hex(npub: str) -> str:
     # Convert Npub to hex using pynostr
