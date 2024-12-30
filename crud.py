@@ -288,7 +288,11 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
                 "status": "already_reported",
                 "report_id": existing_report.id,
                 "report_reason": existing_report.report_reason,
-                "timestamp": existing_report.timestamp
+                "timestamp": existing_report.timestamp,
+                "reported_by": existing_report.reported_by,
+                "handled_by": existing_report.handled_by,
+                "action_taken": existing_report.action_taken,
+                "pubkey": existing_report.pubkey
             }
         
         # Create a new report if no existing report is found
@@ -306,7 +310,11 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
             "status": "created",
             "report_id": new_report.id,
             "report_reason": new_report.report_reason,
-            "timestamp": new_report.timestamp
+            "timestamp": new_report.timestamp,
+            "reported_by": new_report.reported_by,
+            "handled_by": new_report.handled_by,
+            "action_taken": new_report.action_taken,
+            "pubkey": new_report.pubkey
         }
     except Exception as e:
         logging.error(f"Error creating user report: {e}")
