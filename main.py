@@ -218,12 +218,15 @@ async def create_report(report: schemas.UserReportCreate, db: Session = Depends(
     try:
         result = crud.create_user_report(db, report)
         return {
-            "id": 1,  # Replace with actual ID from the database
-            "timestamp": datetime.now(),
+            "id": result.id,  # Assuming result contains the new report's ID
+            "timestamp": result.timestamp,
             "reported_by": report.reported_by,
-            "handled_by": "admin",  # Replace with actual handler
-            "action_taken": "reviewed",  # Replace with actual action
-            **result
+            "handled_by": None,  # Set to None as it hasn't been handled yet
+            "action_taken": None,  # Set to None as no action has been taken yet
+            "message": "Report created successfully",
+            "status": "Pending",  # Set the status to Pending
+            "pubkey": result.pubkey,
+            "report_reason": result.report_reason
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
