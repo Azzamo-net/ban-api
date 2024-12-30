@@ -3,7 +3,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, Request, Body, Header
 from sqlalchemy.orm import Session
 import models, crud, schemas, database, utils
-from database import engine, SessionLocal
+from database import engine, SessionLocal, migrate_database, backup_sqlite
 from dotenv import load_dotenv
 from dependencies import get_api_key
 from rate_limit import RateLimitMiddleware
@@ -296,6 +296,16 @@ async def temp_ban_pubkey(pubkey: schemas.TempBanCreate, db: Session = Depends(g
 @app.delete("/temp-ban/pubkeys", dependencies=[Depends(get_api_key)], summary="Remove Temporary Ban", description="Remove a temporary ban on a public key.", tags=["Moderator Operations"])
 async def remove_temp_ban(pubkey: schemas.PublicKeyCreate, db: Session = Depends(get_db)):
     return crud.remove_temp_ban(db, pubkey)
+
+@app.on_event("startup")
+async def startup_event():
+    # Migrate the database
+    migrate_database()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Backup the SQLite database
+    backup_sqlite()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010)), debug=debug_mode) 
