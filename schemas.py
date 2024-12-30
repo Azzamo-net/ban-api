@@ -139,4 +139,9 @@ class UserReportResponse(BaseModel):
     pubkey: str
     report_reason: Optional[str]
 
+class ReportApproval(BaseModel):
+    report_id: Optional[int] = None
+    pubkey: Optional[str] = None
+    moderator_name: str
+
 # ... other schemas ... 
