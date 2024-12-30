@@ -282,20 +282,20 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
         existing_report = db.query(UserReport).filter(UserReport.pubkey == hex_pubkey).first()
         
         if existing_report:
-            # Return a message indicating the public key is already reported
+            # Return a response with all required fields
             return {
-                "message": "Public key already reported",
-                "status": "already_reported",
-                "report_id": existing_report.id,
-                "report_reason": existing_report.report_reason,
+                "id": existing_report.id,
                 "timestamp": existing_report.timestamp,
                 "reported_by": existing_report.reported_by,
                 "handled_by": existing_report.handled_by,
                 "action_taken": existing_report.action_taken,
-                "pubkey": existing_report.pubkey
+                "message": "Public key already reported",
+                "status": "already_reported",
+                "pubkey": existing_report.pubkey,
+                "report_reason": existing_report.report_reason
             }
-        
-        # Create a new report if no existing report is found
+
+        # Create a new report if not already reported
         new_report = UserReport(
             pubkey=hex_pubkey,
             report_reason=report.report_reason,
@@ -305,16 +305,17 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
         db.add(new_report)
         db.commit()
         db.refresh(new_report)
+
         return {
-            "message": "Report created",
-            "status": "created",
-            "report_id": new_report.id,
-            "report_reason": new_report.report_reason,
+            "id": new_report.id,
             "timestamp": new_report.timestamp,
             "reported_by": new_report.reported_by,
             "handled_by": new_report.handled_by,
             "action_taken": new_report.action_taken,
-            "pubkey": new_report.pubkey
+            "message": "Report created",
+            "status": "created",
+            "pubkey": new_report.pubkey,
+            "report_reason": new_report.report_reason
         }
     except Exception as e:
         logging.error(f"Error creating user report: {e}")
