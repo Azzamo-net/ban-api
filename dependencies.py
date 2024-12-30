@@ -4,6 +4,10 @@ from database import SessionLocal
 from models import Moderator
 import os
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 def get_db():
     db = SessionLocal()
@@ -22,6 +26,7 @@ def get_api_key(x_api_key: str = Header(...), admin_only: bool = False, db: Sess
         logging.info("Admin key matched successfully.")
         return True
 
+    # If the endpoint is admin-only and the key is not the admin key, deny access
     if admin_only:
         logging.warning("Admin-only access attempted with invalid key.")
         raise HTTPException(status_code=403, detail="Invalid API key for admin access")
@@ -34,3 +39,4 @@ def get_api_key(x_api_key: str = Header(...), admin_only: bool = False, db: Sess
 
     logging.warning("Invalid API key provided.")
     raise HTTPException(status_code=403, detail="Invalid API key")
+
