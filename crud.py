@@ -246,11 +246,43 @@ def get_audit_logs(db: SessionLocal):
     return db.query(AuditLog).all()
 
 def create_user_report(db: SessionLocal, report: UserReportCreate):
-    db_report = UserReport(**report.dict())
+    # Check if the public key is already blocked
+    existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == report.pubkey).first()
+    if existing_pubkey:
+        return {
+            "message": "Public key is already blocked",
+            "status": "already_blocked",
+            "pubkey": existing_pubkey.pubkey,
+            "ban_reason": existing_pubkey.ban_reason
+        }
+
+    # Check if the public key is already reported
+    existing_report = db.query(UserReport).filter(UserReport.pubkey == report.pubkey, UserReport.status == "Pending").first()
+    if existing_report:
+        return {
+            "message": "Public key is already reported",
+            "status": "already_reported",
+            "pubkey": existing_report.pubkey,
+            "report_reason": existing_report.report_reason
+        }
+
+    # Create a new report if not already blocked or reported
+    db_report = UserReport(
+        pubkey=report.pubkey,
+        report_reason=report.report_reason,
+        reported_by=report.reported_by,
+        timestamp=datetime.utcnow(),
+        status="Pending"
+    )
     db.add(db_report)
     db.commit()
     db.refresh(db_report)
-    return db_report
+    return {
+        "message": "Report created successfully",
+        "status": "reported",
+        "pubkey": db_report.pubkey,
+        "report_reason": db_report.report_reason
+    }
 
 def update_user_report(db: SessionLocal, report_update: UserReportUpdate):
     db_report = db.query(UserReport).filter(UserReport.id == report_update.id).first()
