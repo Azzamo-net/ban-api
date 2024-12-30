@@ -158,20 +158,20 @@ async def get_public_blocked_words(db: Session = Depends(get_db)):
     return [word.word for word in blocked_words]
 
 # Moderator Management
-@app.post("/moderators", dependencies=[Depends(get_api_key)], summary="Add Moderator (Admin Only)", description="Add a new moderator. Requires admin API key.", tags=["Moderator Management"])
-async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db), x_api_key: str = Header(...)):
+@app.post("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Add Moderator (Admin Only)", description="Add a new moderator. Requires admin API key.", tags=["Moderator Management"])
+async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db)):
     return crud.add_moderator(db, moderator.name, moderator.private_key)
 
-@app.delete("/moderators", dependencies=[Depends(get_api_key)], summary="Remove Moderator (Admin Only)", description="Remove a moderator. Requires admin API key.", tags=["Moderator Management"])
-async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db), x_api_key: str = Header(...)):
+@app.delete("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Remove Moderator (Admin Only)", description="Remove a moderator. Requires admin API key.", tags=["Moderator Management"])
+async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db)):
     return crud.remove_moderator(db, moderator.name)
 
-@app.get("/moderators", dependencies=[Depends(get_api_key)], summary="List Moderators (Admin Only)", description="List all moderators. Requires admin API key.", tags=["Moderator Management"])
-async def list_moderators(db: Session = Depends(get_db), x_api_key: str = Header(...)):
+@app.get("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="List Moderators (Admin Only)", description="List all moderators. Requires admin API key.", tags=["Moderator Management"])
+async def list_moderators(db: Session = Depends(get_db)):
     return crud.list_moderators(db)
 
-@app.patch("/moderators", dependencies=[Depends(get_api_key)], summary="Update Moderator Information (Admin Only)", description="Update the name or private key of an existing moderator. Requires admin API key.", tags=["Moderator Management"])
-async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db), x_api_key: str = Header(...)):
+@app.patch("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Update Moderator Information (Admin Only)", description="Update the name or private key of an existing moderator. Requires admin API key.", tags=["Moderator Management"])
+async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db)):
     """
     Update the name or private key of an existing moderator.
 
