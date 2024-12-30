@@ -82,6 +82,15 @@ class ModeratorUpdate(BaseModel):
     new_name: str | None = None
     new_private_key: str | None = None
 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "current_moderator_name",
+                "new_name": "new_moderator_name",
+                "new_private_key": "new_private_key_123"
+            }
+        }
+
 class UserReportCreate(BaseModel):
     pubkey: str
     report_reason: str
