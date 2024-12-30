@@ -126,4 +126,15 @@ class AuditLog(BaseModel):
     class Config:
         from_attributes = True
 
+class UserReportResponse(BaseModel):
+    id: int
+    timestamp: datetime
+    reported_by: Optional[str]
+    handled_by: Optional[str]
+    action_taken: Optional[str]
+    message: str
+    status: str
+    pubkey: str
+    report_reason: Optional[str]
+
 # ... other schemas ... 
