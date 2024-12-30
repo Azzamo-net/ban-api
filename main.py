@@ -1,4 +1,5 @@
 import os
+import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, Request, Body, Header
 from sqlalchemy.orm import Session
 import models, crud, schemas, database, utils
@@ -10,8 +11,13 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from datetime import datetime
+import logging
 
 load_dotenv()
+
+# Configure logging
+debug_mode = os.getenv("DEBUG", "False").lower() == "true"
+logging.basicConfig(level=logging.DEBUG if debug_mode else logging.INFO)
 
 app = FastAPI(title="Azzamo Banlist API")
 
@@ -38,6 +44,7 @@ async def get_blocked_pubkeys(db: Session = Depends(get_db)):
     try:
         return crud.get_blocked_pubkeys(db)
     except Exception as e:
+        logging.error(f"Error retrieving blocked public keys: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/blocked/words", response_model=list[schemas.Word], summary="Get Blocked Words", description="Retrieve a list of all blocked words.", tags=["Core"])
@@ -217,19 +224,13 @@ async def get_audit_logs(db: Session = Depends(get_db)):
 async def create_report(report: schemas.UserReportCreate, db: Session = Depends(get_db)):
     try:
         result = crud.create_user_report(db, report)
-        return {
-            "id": result.id,  # Assuming result contains the new report's ID
-            "timestamp": result.timestamp,
-            "reported_by": report.reported_by,
-            "handled_by": None,  # Set to None as it hasn't been handled yet
-            "action_taken": None,  # Set to None as no action has been taken yet
-            "message": "Report created successfully",
-            "status": "Pending",  # Set the status to Pending
-            "pubkey": result.pubkey,
-            "report_reason": result.report_reason
-        }
+        return result
+    except HTTPException as e:
+        logging.error(f"HTTP error occurred: {e.detail}")
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"Unexpected error occurred: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 @app.patch("/reports", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Update User Report", description="Update the status of a user report.", tags=["User Reports"])
 async def update_report(report_update: schemas.UserReportUpdate, db: Session = Depends(get_db)):
@@ -297,5 +298,4 @@ async def remove_temp_ban(pubkey: schemas.PublicKeyCreate, db: Session = Depends
     return crud.remove_temp_ban(db, pubkey)
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010))) 
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010)), debug=debug_mode) 
