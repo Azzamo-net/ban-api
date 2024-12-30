@@ -57,17 +57,38 @@ def remove_blocked_pubkey(db: SessionLocal, pubkey: PublicKeyCreate):
         db.commit()
 
 def temp_ban_pubkey(db: SessionLocal, pubkey: TempBanCreate):
-    expiry = datetime.utcnow() + timedelta(hours=pubkey.duration)
-    db_temp_ban = TempBan(pubkey=pubkey.pubkey, expiry_timestamp=expiry)
-    db.add(db_temp_ban)
-    db.commit()
-    db.refresh(db_temp_ban)
-
-    # Update the ban reason if provided
-    if pubkey.ban_reason:
-        update_ban_reason(db, pubkey.pubkey, pubkey.ban_reason)
-
-    return db_temp_ban
+    # Check if the public key is already temporarily banned
+    existing_temp_ban = db.query(TempBan).filter(TempBan.pubkey == pubkey.pubkey).first()
+    
+    if existing_temp_ban:
+        # Extend the existing ban duration
+        existing_temp_ban.expiry_timestamp += timedelta(hours=pubkey.duration)
+        db.commit()
+        db.refresh(existing_temp_ban)
+        return {
+            "message": "Temporary ban extended",
+            "status": "extended",
+            "pubkey": existing_temp_ban.pubkey,
+            "new_expiry_timestamp": existing_temp_ban.expiry_timestamp
+        }
+    else:
+        # Create a new temporary ban
+        expiry = datetime.utcnow() + timedelta(hours=pubkey.duration)
+        db_temp_ban = TempBan(pubkey=pubkey.pubkey, expiry_timestamp=expiry)
+        db.add(db_temp_ban)
+        db.commit()
+        db.refresh(db_temp_ban)
+        
+        # Update the ban reason if provided
+        if pubkey.ban_reason:
+            update_ban_reason(db, pubkey.pubkey, pubkey.ban_reason)
+        
+        return {
+            "message": "Temporary ban applied",
+            "status": "banned",
+            "pubkey": db_temp_ban.pubkey,
+            "expiry_timestamp": db_temp_ban.expiry_timestamp
+        }
 
 def remove_temp_ban(db: SessionLocal, pubkey: PublicKeyCreate):
     db_temp_ban = db.query(TempBan).filter(TempBan.pubkey == pubkey.pubkey).first()
