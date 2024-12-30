@@ -270,36 +270,29 @@ def get_audit_logs(db: SessionLocal):
     # Assuming you have an AuditLog model
     return db.query(AuditLog).all()
 
-def create_user_report(db: SessionLocal, report: UserReportCreate, api_key: str = Depends(get_api_key)):
+def create_user_report(db: SessionLocal, report: UserReportCreate):
     try:
-        # Check if the public key is already banned
+        # Check if the public key is already reported
         existing_report = db.query(UserReport).filter(UserReport.pubkey == report.pubkey).first()
         
         if existing_report:
-            if not api_key:
-                # Return existing report details if no admin/moderator API key is provided
-                return {
-                    "message": "Public key already reported",
-                    "status": "already_reported",
-                    "report_id": existing_report.id,
-                    "ban_reason": existing_report.ban_reason,
-                    "timestamp": existing_report.timestamp
-                }
-            else:
-                # Update the report if an admin/moderator API key is provided
-                existing_report.ban_reason = report.ban_reason
-                db.commit()
-                db.refresh(existing_report)
-                return {
-                    "message": "Report updated",
-                    "status": "updated",
-                    "report_id": existing_report.id,
-                    "ban_reason": existing_report.ban_reason,
-                    "timestamp": existing_report.timestamp
-                }
+            # Return a message indicating the public key is already reported
+            return {
+                "message": "Public key already reported",
+                "status": "already_reported",
+                "report_id": existing_report.id,
+                "ban_reason": existing_report.ban_reason,
+                "timestamp": existing_report.timestamp
+            }
         
         # Create a new report if no existing report is found
-        new_report = UserReport(pubkey=report.pubkey, ban_reason=report.ban_reason, timestamp=datetime.utcnow())
+        new_report = UserReport(
+            pubkey=report.pubkey,
+            report_reason=report.report_reason,
+            ban_reason=report.ban_reason,
+            reported_by=report.reported_by,
+            timestamp=datetime.utcnow()
+        )
         db.add(new_report)
         db.commit()
         db.refresh(new_report)
