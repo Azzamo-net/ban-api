@@ -21,8 +21,12 @@ logging.basicConfig(level=logging.DEBUG if debug_mode else logging.INFO)
 
 app = FastAPI(title="Azzamo Banlist API")
 
-# Add rate limiting middleware
-app.add_middleware(RateLimitMiddleware, rate_limit=int(os.getenv("RATE_LIMIT", 100)))
+# Add rate limiting middleware with ban duration
+app.add_middleware(
+    RateLimitMiddleware,
+    rate_limit=int(os.getenv("RATE_LIMIT", 100)),
+    ban_duration=int(os.getenv("RATE_LIMIT_BAN_DURATION", 1260))
+)
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
