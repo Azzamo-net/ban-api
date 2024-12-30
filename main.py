@@ -172,10 +172,27 @@ async def list_moderators(db: Session = Depends(get_db), x_api_key: str = Header
 
 @app.patch("/moderators", dependencies=[Depends(get_api_key)], summary="Update Moderator Information (Admin Only)", description="Update the name or private key of an existing moderator. Requires admin API key.", tags=["Moderator Management"])
 async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db), x_api_key: str = Header(...)):
+    """
+    Update the name or private key of an existing moderator.
+
+    - **name**: Current name of the moderator.
+    - **new_name**: New name for the moderator (optional).
+    - **new_private_key**: New private key for the moderator (optional).
+
+    Requires admin API key.
+    """
     return crud.update_moderator_info(db, moderator.name, moderator.new_name, moderator.new_private_key)
 
-@app.get("/search/blocked", dependencies=[Depends(get_api_key)], summary="Search Blocked Entities", description="Search for blocked public keys, IPs, or words.")
+@app.get("/search/blocked", dependencies=[Depends(get_api_key)], summary="Search Blocked Entities", description="Search for blocked public keys, IPs, or words.", tags=["Search"])
 async def search_blocked_entities(entity_type: str, query: str, db: Session = Depends(get_db)):
+    """
+    Search for blocked entities.
+
+    - **entity_type**: Type of entity to search for (pubkey, ip, word).
+    - **query**: Search query string.
+
+    Returns a list of matching entities.
+    """
     if entity_type not in ["pubkey", "ip", "word"]:
         raise HTTPException(status_code=400, detail="Invalid entity type")
     return crud.search_blocked_entities(db, entity_type, query)
