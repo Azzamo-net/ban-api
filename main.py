@@ -128,8 +128,11 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 @app.patch("/blocked/pubkeys/ban-reason", dependencies=[Depends(get_api_key)], summary="Update Ban Reason", description="Update the ban reason for a public key.")
-async def update_ban_reason(pubkey: str, reason: str, db: Session = Depends(get_db)):
-    return crud.update_ban_reason(db, pubkey, reason)
+async def update_ban_reason(
+    data: schemas.BanReasonUpdate = Body(...),
+    db: Session = Depends(get_db)
+):
+    return crud.update_ban_reason(db, data.pubkey, data.reason)
 
 @app.delete("/blocked/pubkeys/ban-reason", dependencies=[Depends(get_api_key)], summary="Remove Ban Reason", description="Remove the ban reason for a public key.")
 async def remove_ban_reason(pubkey: str, db: Session = Depends(get_db)):
