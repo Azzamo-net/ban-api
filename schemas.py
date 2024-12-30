@@ -144,4 +144,16 @@ class ReportApproval(BaseModel):
     pubkey: Optional[str] = None
     moderator_name: str
 
+class BanReasonUpdate(BaseModel):
+    pubkey: str
+    reason: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "pubkey": "npub1examplepublickey",
+                "reason": "Updated ban reason"
+            }
+        }
+
 # ... other schemas ... 
