@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 class PublicKeyBase(BaseModel):
     pubkey: str
@@ -94,8 +95,8 @@ class ModeratorUpdate(BaseModel):
 
 class UserReportCreate(BaseModel):
     pubkey: str
-    report_reason: str
-    reported_by: str
+    report_reason: Optional[str] = None
+    reported_by: Optional[str] = None
 
 class UserReportUpdate(BaseModel):
     id: int
