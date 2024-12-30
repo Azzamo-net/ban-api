@@ -3,7 +3,7 @@ from models import PublicKey, TempBan, Word, IPAddress, Moderator, AuditLog, Use
 from schemas import PublicKeyCreate, TempBanCreate, UserReportCreate, UserReportUpdate
 from datetime import datetime, timedelta
 from pynostr.key import PublicKey as NostrPublicKey
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 import logging
 import requests
 import os
@@ -269,74 +269,45 @@ def get_audit_logs(db: SessionLocal):
     # Assuming you have an AuditLog model
     return db.query(AuditLog).all()
 
-def create_user_report(db: SessionLocal, report: UserReportCreate):
+def create_user_report(db: SessionLocal, report: UserReportCreate, api_key: str = Depends(get_api_key)):
     try:
-        # Check if the public key is already blocked
-        existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == report.pubkey).first()
-        if existing_pubkey:
-            return {
-                "id": None,
-                "timestamp": None,
-                "reported_by": report.reported_by,
-                "handled_by": None,
-                "action_taken": "already_blocked",
-                "message": "Public key is already blocked",
-                "status": "already_blocked",
-                "pubkey": existing_pubkey.pubkey,
-                "report_reason": report.report_reason
-            }
-
-        # Check if the public key is already reported
-        existing_report = db.query(UserReport).filter(UserReport.pubkey == report.pubkey, UserReport.status == "Pending").first()
+        # Check if the public key is already banned
+        existing_report = db.query(UserReport).filter(UserReport.pubkey == report.pubkey).first()
+        
         if existing_report:
-            return {
-                "id": existing_report.id,
-                "timestamp": existing_report.timestamp,
-                "reported_by": existing_report.reported_by,
-                "handled_by": existing_report.handled_by,
-                "action_taken": existing_report.action_taken,
-                "message": "Public key is already reported",
-                "status": "already_reported",
-                "pubkey": existing_report.pubkey,
-                "report_reason": existing_report.report_reason
-            }
-
-        # Create a new report
-        new_report = UserReport(
-            pubkey=report.pubkey,
-            reported_by=report.reported_by,
-            report_reason=report.report_reason,
-            timestamp=datetime.utcnow(),
-            status="Pending"
-        )
+            if not api_key:
+                # Return existing report details if no admin/moderator API key is provided
+                return {
+                    "message": "Public key already reported",
+                    "status": "already_reported",
+                    "report_id": existing_report.id,
+                    "ban_reason": existing_report.ban_reason,
+                    "timestamp": existing_report.timestamp
+                }
+            else:
+                # Update the report if an admin/moderator API key is provided
+                existing_report.ban_reason = report.ban_reason
+                db.commit()
+                db.refresh(existing_report)
+                return {
+                    "message": "Report updated",
+                    "status": "updated",
+                    "report_id": existing_report.id,
+                    "ban_reason": existing_report.ban_reason,
+                    "timestamp": existing_report.timestamp
+                }
+        
+        # Create a new report if no existing report is found
+        new_report = UserReport(pubkey=report.pubkey, ban_reason=report.ban_reason, timestamp=datetime.utcnow())
         db.add(new_report)
         db.commit()
         db.refresh(new_report)
-
-        # Send notification to Telegram bot if URL is set
-        telegram_api_url = os.getenv("TELEGRAM_API_URL")
-        if telegram_api_url:
-            try:
-                response = requests.post(telegram_api_url, json={
-                    "pubkey": new_report.pubkey,
-                    "reported_by": new_report.reported_by,
-                    "report_reason": new_report.report_reason,
-                    "timestamp": new_report.timestamp.isoformat()
-                })
-                response.raise_for_status()
-            except requests.exceptions.RequestException as e:
-                logging.error(f"Failed to notify Telegram bot: {e}")
-
         return {
-            "id": new_report.id,
-            "timestamp": new_report.timestamp,
-            "reported_by": new_report.reported_by,
-            "handled_by": new_report.handled_by,
-            "action_taken": "reported",
-            "message": "Public key reported successfully",
-            "status": "reported",
-            "pubkey": new_report.pubkey,
-            "report_reason": new_report.report_reason
+            "message": "Report created",
+            "status": "created",
+            "report_id": new_report.id,
+            "ban_reason": new_report.ban_reason,
+            "timestamp": new_report.timestamp
         }
     except Exception as e:
         logging.error(f"Error creating user report: {e}")
