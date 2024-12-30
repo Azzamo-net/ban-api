@@ -4,6 +4,7 @@ from schemas import PublicKeyCreate, TempBanCreate, UserReportCreate, UserReport
 from datetime import datetime, timedelta
 from pynostr.key import PublicKey as NostrPublicKey
 from fastapi import HTTPException
+import logging
 
 def convert_npub_to_hex(npub: str) -> str:
     # Convert Npub to hex using pynostr
@@ -246,43 +247,52 @@ def get_audit_logs(db: SessionLocal):
     return db.query(AuditLog).all()
 
 def create_user_report(db: SessionLocal, report: UserReportCreate):
-    # Check if the public key is already blocked
-    existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == report.pubkey).first()
-    if existing_pubkey:
-        return {
-            "message": "Public key is already blocked",
-            "status": "already_blocked",
-            "pubkey": existing_pubkey.pubkey,
-            "ban_reason": existing_pubkey.ban_reason
-        }
+    try:
+        # Check if the public key is already blocked
+        existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == report.pubkey).first()
+        if existing_pubkey:
+            return {
+                "message": "Public key is already blocked",
+                "status": "already_blocked",
+                "pubkey": existing_pubkey.pubkey,
+                "ban_reason": existing_pubkey.ban_reason
+            }
 
-    # Check if the public key is already reported
-    existing_report = db.query(UserReport).filter(UserReport.pubkey == report.pubkey, UserReport.status == "Pending").first()
-    if existing_report:
-        return {
-            "message": "Public key is already reported",
-            "status": "already_reported",
-            "pubkey": existing_report.pubkey,
-            "report_reason": existing_report.report_reason
-        }
+        # Check if the public key is already reported
+        existing_report = db.query(UserReport).filter(UserReport.pubkey == report.pubkey, UserReport.status == "Pending").first()
+        if existing_report:
+            return {
+                "message": "Public key is already reported",
+                "status": "already_reported",
+                "pubkey": existing_report.pubkey,
+                "report_reason": existing_report.report_reason
+            }
 
-    # Create a new report if not already blocked or reported
-    db_report = UserReport(
-        pubkey=report.pubkey,
-        report_reason=report.report_reason,
-        reported_by=report.reported_by,
-        timestamp=datetime.utcnow(),
-        status="Pending"
-    )
-    db.add(db_report)
-    db.commit()
-    db.refresh(db_report)
-    return {
-        "message": "Report created successfully",
-        "status": "reported",
-        "pubkey": db_report.pubkey,
-        "report_reason": db_report.report_reason
-    }
+        # Create a new report if not already blocked or reported
+        db_report = UserReport(
+            pubkey=report.pubkey,
+            report_reason=report.report_reason,
+            reported_by=report.reported_by,
+            timestamp=datetime.utcnow(),
+            status="Pending"
+        )
+        db.add(db_report)
+        db.commit()
+        db.refresh(db_report)
+        return {
+            "id": db_report.id,
+            "timestamp": db_report.timestamp,
+            "reported_by": db_report.reported_by,
+            "handled_by": None,
+            "action_taken": None,
+            "message": "Report created successfully",
+            "status": "reported",
+            "pubkey": db_report.pubkey,
+            "report_reason": db_report.report_reason
+        }
+    except Exception as e:
+        logging.error(f"Error creating user report: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while creating the report.")
 
 def update_user_report(db: SessionLocal, report_update: UserReportUpdate):
     db_report = db.query(UserReport).filter(UserReport.id == report_update.id).first()
