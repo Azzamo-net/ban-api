@@ -281,7 +281,7 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
                 "message": "Public key already reported",
                 "status": "already_reported",
                 "report_id": existing_report.id,
-                "ban_reason": existing_report.ban_reason,
+                "report_reason": existing_report.report_reason,
                 "timestamp": existing_report.timestamp
             }
         
@@ -289,7 +289,6 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
         new_report = UserReport(
             pubkey=report.pubkey,
             report_reason=report.report_reason,
-            ban_reason=report.ban_reason,
             reported_by=report.reported_by,
             timestamp=datetime.utcnow()
         )
@@ -300,7 +299,7 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
             "message": "Report created",
             "status": "created",
             "report_id": new_report.id,
-            "ban_reason": new_report.ban_reason,
+            "report_reason": new_report.report_reason,
             "timestamp": new_report.timestamp
         }
     except Exception as e:
