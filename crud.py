@@ -282,7 +282,24 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
         existing_report = db.query(UserReport).filter(UserReport.pubkey == hex_pubkey).first()
         
         if existing_report:
-            # Return a response with all required fields
+            # Check if the user is already banned
+            existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == hex_pubkey).first()
+            if existing_pubkey and existing_pubkey.ban_reason:
+                existing_report.status = "Handled"
+                existing_report.action_taken = "Already Banned"
+                db.commit()
+                db.refresh(existing_report)
+                return {
+                    "id": existing_report.id,
+                    "timestamp": existing_report.timestamp,
+                    "reported_by": existing_report.reported_by,
+                    "handled_by": existing_report.handled_by,
+                    "action_taken": existing_report.action_taken,
+                    "message": "Public key already reported and banned",
+                    "status": "already_reported",
+                    "pubkey": existing_report.pubkey,
+                    "report_reason": existing_report.report_reason
+                }
             return {
                 "id": existing_report.id,
                 "timestamp": existing_report.timestamp,
@@ -356,7 +373,7 @@ def approve_report(db: SessionLocal, report_id: int, moderator_name: str):
         db.add(db_pubkey)
 
     # Update report status
-    report.status = "Approved"
+    report.status = "Handled"
     report.handled_by = moderator_name
     report.action_taken = "Banned"
     db.commit()
