@@ -95,7 +95,8 @@ class ModeratorUpdate(BaseModel):
 
 class UserReportCreate(BaseModel):
     pubkey: str
-    report_reason: Optional[str] = None
+    report_reason: str
+    ban_reason: str = None
     reported_by: Optional[str] = None
 
 class UserReportUpdate(BaseModel):
