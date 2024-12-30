@@ -240,9 +240,12 @@ async def recent_activity(db: Session = Depends(get_db)):
     return crud.get_recent_activity(db)
 
 # Approve a reported user and ban them
-@app.patch("/reports/approve/{report_id}", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Approve Report", description="Approve a report and ban the reported user.")
-async def approve_report(report_id: int, db: Session = Depends(get_db), moderator_name: str = Header(...)):
-    return crud.approve_report(db, report_id, moderator_name)
+@app.patch("/reports/approve", dependencies=[Depends(get_api_key)], response_model=schemas.UserReport, summary="Approve Report", description="Approve a report and ban the reported user.")
+async def approve_report(
+    db: Session = Depends(get_db),
+    report_data: schemas.ReportApproval = Body(...)
+):
+    return crud.approve_report(db, report_data)
 
 # Public endpoint to get pending reports
 @app.get("/reports/pending", response_model=list[schemas.UserReport], summary="Get Pending Reports", description="Retrieve all pending user reports.", tags=["User Reports"])
