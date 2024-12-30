@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from pynostr.key import PublicKey as NostrPublicKey
 from fastapi import HTTPException
 import logging
+import requests
+import os
 
 def convert_npub_to_hex(npub: str) -> str:
     # Convert Npub to hex using pynostr
@@ -278,31 +280,46 @@ def create_user_report(db: SessionLocal, report: UserReportCreate):
                 "report_reason": existing_report.report_reason
             }
 
-        # Create a new report if not already blocked or reported
-        db_report = UserReport(
+        # Create a new report
+        new_report = UserReport(
             pubkey=report.pubkey,
-            report_reason=report.report_reason,
             reported_by=report.reported_by,
+            report_reason=report.report_reason,
             timestamp=datetime.utcnow(),
             status="Pending"
         )
-        db.add(db_report)
+        db.add(new_report)
         db.commit()
-        db.refresh(db_report)
+        db.refresh(new_report)
+
+        # Send notification to Telegram bot if URL is set
+        telegram_api_url = os.getenv("TELEGRAM_API_URL")
+        if telegram_api_url:
+            try:
+                response = requests.post(telegram_api_url, json={
+                    "pubkey": new_report.pubkey,
+                    "reported_by": new_report.reported_by,
+                    "report_reason": new_report.report_reason,
+                    "timestamp": new_report.timestamp.isoformat()
+                })
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Failed to notify Telegram bot: {e}")
+
         return {
-            "id": db_report.id,
-            "timestamp": db_report.timestamp,
-            "reported_by": db_report.reported_by,
-            "handled_by": None,
-            "action_taken": None,
-            "message": "Report created successfully",
+            "id": new_report.id,
+            "timestamp": new_report.timestamp,
+            "reported_by": new_report.reported_by,
+            "handled_by": new_report.handled_by,
+            "action_taken": "reported",
+            "message": "Public key reported successfully",
             "status": "reported",
-            "pubkey": db_report.pubkey,
-            "report_reason": db_report.report_reason
+            "pubkey": new_report.pubkey,
+            "report_reason": new_report.report_reason
         }
     except Exception as e:
         logging.error(f"Error creating user report: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while creating the report.")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 def update_user_report(db: SessionLocal, report_update: UserReportUpdate):
     db_report = db.query(UserReport).filter(UserReport.id == report_update.id).first()
