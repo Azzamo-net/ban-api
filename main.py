@@ -33,19 +33,19 @@ def get_db():
         db.close()
 
 # Public Endpoints
-@app.get("/blocked/pubkeys", response_model=list[schemas.PublicKey], summary="Get Blocked Public Keys", description="Retrieve a list of all blocked public keys.", tags=["Public"])
+@app.get("/blocked/pubkeys", response_model=list[schemas.PublicKey], summary="Get Blocked Public Keys", description="Retrieve a list of all blocked public keys.", tags=["Core"])
 async def get_blocked_pubkeys(db: Session = Depends(get_db)):
     try:
         return crud.get_blocked_pubkeys(db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/blocked/words", response_model=list[schemas.Word], summary="Get Blocked Words", description="Retrieve a list of all blocked words.")
+@app.get("/blocked/words", response_model=list[schemas.Word], summary="Get Blocked Words", description="Retrieve a list of all blocked words.", tags=["Core"])
 async def get_blocked_words(db: Session = Depends(get_db)):
     words = crud.get_blocked_words(db)
     return [{"id": word.id, "word": word.word, "timestamp": word.timestamp.isoformat()} for word in words]
 
-@app.get("/blocked/ips", response_model=list[schemas.IPAddress], dependencies=[Depends(get_api_key)], summary="Get Blocked IPs", description="Retrieve a list of all blocked IP addresses.")
+@app.get("/blocked/ips", response_model=list[schemas.IPAddress], dependencies=[Depends(get_api_key)], summary="Get Blocked IPs", description="Retrieve a list of all blocked IP addresses.", tags=["Core"])
 async def get_blocked_ips(db: Session = Depends(get_db)):
     return crud.get_blocked_ips(db)
 
@@ -254,12 +254,12 @@ async def get_pending_reports(db: Session = Depends(get_db)):
     return crud.get_pending_reports(db)
 
 # Public endpoint to get all reports
-@app.get("/reports/all", response_model=list[schemas.UserReport], summary="Get All Reports", description="Retrieve all user reports.", tags=["User Reports"])
+@app.get("/reports/all", response_model=list[schemas.UserReport], summary="Get All Reports", description="Retrieve all user reports.", tags=["Core"])
 async def get_all_reports(db: Session = Depends(get_db)):
     return crud.get_all_reports(db)
 
 # Public endpoint to get successful reports
-@app.get("/reports/successful", response_model=list[schemas.UserReport], summary="Get Successful Reports", description="Retrieve all successfully reported and banned users.", tags=["User Reports"])
+@app.get("/reports/successful", response_model=list[schemas.UserReport], summary="Get Successful Reports", description="Retrieve all successfully reported and banned users.", tags=["Core"])
 async def get_successful_reports(db: Session = Depends(get_db)):
     return crud.get_successful_reports(db)
 
