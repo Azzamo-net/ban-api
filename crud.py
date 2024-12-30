@@ -1,6 +1,6 @@
 from database import SessionLocal
 from models import PublicKey, TempBan, Word, IPAddress, Moderator, AuditLog, UserReport
-from schemas import PublicKeyCreate, TempBanCreate, UserReportCreate, UserReportUpdate
+from schemas import PublicKeyCreate, TempBanCreate, UserReportCreate, UserReportUpdate, ReportApproval
 from datetime import datetime, timedelta
 from pynostr.key import PublicKey as NostrPublicKey
 from fastapi import HTTPException, Depends
@@ -9,6 +9,7 @@ import requests
 import os
 from dependencies import get_api_key
 from sqlalchemy.orm import Session
+import schemas
 
 def convert_npub_to_hex(npub: str) -> str:
     # Convert Npub to hex using pynostr
