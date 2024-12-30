@@ -19,14 +19,18 @@ def get_api_key(x_api_key: str = Header(...), admin_only: bool = False, db: Sess
 
     # Allow admin key for all endpoints
     if x_api_key == admin_key:
+        logging.info("Admin key matched successfully.")
         return True
 
     if admin_only:
+        logging.warning("Admin-only access attempted with invalid key.")
         raise HTTPException(status_code=403, detail="Invalid API key for admin access")
 
     # Check if the key is a valid moderator key
     moderator = db.query(Moderator).filter(Moderator.private_key == x_api_key).first()
     if moderator:
+        logging.info("Moderator key matched successfully.")
         return True
 
+    logging.warning("Invalid API key provided.")
     raise HTTPException(status_code=403, detail="Invalid API key")
