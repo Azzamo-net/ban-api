@@ -1,9 +1,15 @@
 from database import SessionLocal
-from models import PublicKey, TempBan, Word, IPAddress, Moderator, AuditLog
-from schemas import PublicKeyCreate, TempBanCreate
+from models import PublicKey, TempBan, Word, IPAddress, Moderator, AuditLog, UserReport
+from schemas import PublicKeyCreate, TempBanCreate, UserReportCreate, UserReportUpdate, ReportApproval
 from datetime import datetime, timedelta
 from pynostr.key import PublicKey as NostrPublicKey
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
+import logging
+import requests
+import os
+from dependencies import get_api_key
+from sqlalchemy.orm import Session
+import schemas
 
 def convert_npub_to_hex(npub: str) -> str:
     # Convert Npub to hex using pynostr
@@ -54,17 +60,38 @@ def remove_blocked_pubkey(db: SessionLocal, pubkey: PublicKeyCreate):
         db.commit()
 
 def temp_ban_pubkey(db: SessionLocal, pubkey: TempBanCreate):
-    expiry = datetime.utcnow() + timedelta(hours=pubkey.duration)
-    db_temp_ban = TempBan(pubkey=pubkey.pubkey, expiry_timestamp=expiry)
-    db.add(db_temp_ban)
-    db.commit()
-    db.refresh(db_temp_ban)
-
-    # Update the ban reason if provided
-    if pubkey.ban_reason:
-        update_ban_reason(db, pubkey.pubkey, pubkey.ban_reason)
-
-    return db_temp_ban
+    # Check if the public key is already temporarily banned
+    existing_temp_ban = db.query(TempBan).filter(TempBan.pubkey == pubkey.pubkey).first()
+    
+    if existing_temp_ban:
+        # Extend the existing ban duration
+        existing_temp_ban.expiry_timestamp += timedelta(hours=pubkey.duration)
+        db.commit()
+        db.refresh(existing_temp_ban)
+        return {
+            "message": "Temporary ban extended",
+            "status": "extended",
+            "pubkey": existing_temp_ban.pubkey,
+            "new_expiry_timestamp": existing_temp_ban.expiry_timestamp
+        }
+    else:
+        # Create a new temporary ban
+        expiry = datetime.utcnow() + timedelta(hours=pubkey.duration)
+        db_temp_ban = TempBan(pubkey=pubkey.pubkey, expiry_timestamp=expiry)
+        db.add(db_temp_ban)
+        db.commit()
+        db.refresh(db_temp_ban)
+        
+        # Update the ban reason if provided
+        if pubkey.ban_reason:
+            update_ban_reason(db, pubkey.pubkey, pubkey.ban_reason)
+        
+        return {
+            "message": "Temporary ban applied",
+            "status": "banned",
+            "pubkey": db_temp_ban.pubkey,
+            "expiry_timestamp": db_temp_ban.expiry_timestamp
+        }
 
 def remove_temp_ban(db: SessionLocal, pubkey: PublicKeyCreate):
     db_temp_ban = db.query(TempBan).filter(TempBan.pubkey == pubkey.pubkey).first()
@@ -244,5 +271,129 @@ def update_moderator_info(db: SessionLocal, name: str, new_name: str = None, new
 def get_audit_logs(db: SessionLocal):
     # Assuming you have an AuditLog model
     return db.query(AuditLog).all()
+
+def create_user_report(db: SessionLocal, report: UserReportCreate):
+    try:
+        # Convert npub to hex if necessary
+        if report.pubkey.startswith("npub"):
+            hex_pubkey = convert_npub_to_hex(report.pubkey)
+        else:
+            hex_pubkey = report.pubkey
+
+        # Check if the public key is already reported
+        existing_report = db.query(UserReport).filter(UserReport.pubkey == hex_pubkey).first()
+        
+        if existing_report:
+            # Check if the user is already banned
+            existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == hex_pubkey).first()
+            if existing_pubkey and existing_pubkey.ban_reason:
+                existing_report.status = "Handled"
+                existing_report.action_taken = "Already Banned"
+                db.commit()
+                db.refresh(existing_report)
+                return {
+                    "id": existing_report.id,
+                    "timestamp": existing_report.timestamp,
+                    "reported_by": existing_report.reported_by,
+                    "handled_by": existing_report.handled_by,
+                    "action_taken": existing_report.action_taken,
+                    "message": "Public key already reported and banned",
+                    "status": "already_reported",
+                    "pubkey": existing_report.pubkey,
+                    "report_reason": existing_report.report_reason
+                }
+            return {
+                "id": existing_report.id,
+                "timestamp": existing_report.timestamp,
+                "reported_by": existing_report.reported_by,
+                "handled_by": existing_report.handled_by,
+                "action_taken": existing_report.action_taken,
+                "message": "Public key already reported",
+                "status": "already_reported",
+                "pubkey": existing_report.pubkey,
+                "report_reason": existing_report.report_reason
+            }
+
+        # Create a new report if not already reported
+        new_report = UserReport(
+            pubkey=hex_pubkey,
+            report_reason=report.report_reason,
+            reported_by=report.reported_by,
+            timestamp=datetime.utcnow()
+        )
+        db.add(new_report)
+        db.commit()
+        db.refresh(new_report)
+
+        return {
+            "id": new_report.id,
+            "timestamp": new_report.timestamp,
+            "reported_by": new_report.reported_by,
+            "handled_by": new_report.handled_by,
+            "action_taken": new_report.action_taken,
+            "message": "Report created",
+            "status": "created",
+            "pubkey": new_report.pubkey,
+            "report_reason": new_report.report_reason
+        }
+    except Exception as e:
+        logging.error(f"Error creating user report: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+def update_user_report(db: SessionLocal, report_update: UserReportUpdate):
+    db_report = db.query(UserReport).filter(UserReport.id == report_update.id).first()
+    if db_report:
+        db_report.status = report_update.status
+        db_report.handled_by = report_update.handled_by
+        db_report.action_taken = report_update.action_taken
+        db.commit()
+        db.refresh(db_report)
+        return db_report
+    raise HTTPException(status_code=404, detail="Report not found")
+
+def get_user_reports(db: SessionLocal, pubkey: str):
+    return db.query(UserReport).filter(UserReport.pubkey == pubkey).all()
+
+def get_recent_activity(db: SessionLocal):
+    return db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(10).all()
+
+def approve_report(db: Session, report_data: schemas.ReportApproval):
+    report = None
+
+    if report_data.report_id:
+        report = db.query(UserReport).filter(UserReport.id == report_data.report_id).first()
+    elif report_data.pubkey:
+        report = db.query(UserReport).filter(UserReport.pubkey == report_data.pubkey).first()
+
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Ban the user
+    pubkey = report.pubkey
+    existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == pubkey).first()
+    if existing_pubkey:
+        if not existing_pubkey.ban_reason:
+            existing_pubkey.ban_reason = report.report_reason
+        existing_pubkey.moderator_name = report_data.moderator_name
+    else:
+        db_pubkey = PublicKey(pubkey=pubkey, npub=pubkey, timestamp=datetime.utcnow(), ban_reason=report.report_reason)
+        db.add(db_pubkey)
+
+    # Update report status
+    report.status = "Handled"
+    report.handled_by = report_data.moderator_name
+    report.action_taken = "Banned"
+    db.commit()
+    db.refresh(report)
+    return report
+
+def get_pending_reports(db: SessionLocal):
+    return db.query(UserReport).filter(UserReport.status == "Pending").all()
+
+def get_all_reports(db: SessionLocal):
+    return db.query(UserReport).all()
+
+def get_successful_reports(db: SessionLocal):
+    return db.query(UserReport).filter(UserReport.status == "Approved").all()
 
 # ... other CRUD operations ... 
