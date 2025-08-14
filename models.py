@@ -10,6 +10,7 @@ class PublicKey(Base):
     npub = Column(String, unique=True, index=True)
     timestamp = Column(DateTime)
     ban_reason = Column(String, nullable=True)
+    moderator_name = Column(String, nullable=True)
 
 class Word(Base):
     __tablename__ = "blocked_words"
@@ -42,7 +43,7 @@ class AuditLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     action = Column(String)
     timestamp = Column(DateTime)
-    moderator_name = Column(String)
+    performed_by = Column(String)  # Changed from moderator_name to performed_by to match schema
     details = Column(String)
 
 class UserReport(Base):

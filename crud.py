@@ -13,13 +13,24 @@ import schemas
 
 def convert_npub_to_hex(npub: str) -> str:
     # Convert Npub to hex using pynostr
-    public_key = NostrPublicKey.from_npub(npub)
-    return public_key.hex()
+    try:
+        public_key = NostrPublicKey.from_npub(npub)
+        return public_key.hex()
+    except Exception as e:
+        # If the npub is invalid, raise a more descriptive error
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid npub format: {npub}. Error: {str(e)}"
+        )
 
 def get_blocked_pubkeys(db: SessionLocal):
     return db.query(PublicKey).all()
 
 def add_blocked_pubkey(db: SessionLocal, pubkey: PublicKeyCreate):
+    # Validate pubkey is not empty
+    if not pubkey.pubkey or not pubkey.pubkey.strip():
+        raise HTTPException(status_code=400, detail="Pubkey cannot be empty")
+    
     # Check if the pubkey is in Npub format and convert it
     if pubkey.pubkey.startswith("npub"):
         hex_pubkey = convert_npub_to_hex(pubkey.pubkey)
@@ -54,14 +65,44 @@ def add_blocked_pubkey(db: SessionLocal, pubkey: PublicKeyCreate):
     }
 
 def remove_blocked_pubkey(db: SessionLocal, pubkey: PublicKeyCreate):
-    db_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == pubkey.pubkey).first()
+    # Convert Npub to hex if necessary
+    if pubkey.pubkey.startswith("npub"):
+        hex_pubkey = convert_npub_to_hex(pubkey.pubkey)
+    else:
+        hex_pubkey = pubkey.pubkey
+    
+    # Try to find by hex pubkey first
+    db_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == hex_pubkey).first()
+    
+    # If not found and original was npub, also try searching by npub
+    if not db_pubkey and pubkey.pubkey.startswith("npub"):
+        db_pubkey = db.query(PublicKey).filter(PublicKey.npub == pubkey.pubkey).first()
+    
     if db_pubkey:
+        # Also remove any temporary bans for this pubkey
+        temp_ban = db.query(TempBan).filter(TempBan.pubkey == hex_pubkey).first()
+        if temp_ban:
+            db.delete(temp_ban)
+        
         db.delete(db_pubkey)
         db.commit()
+        return {"message": "Public key removed", "status": "removed", "pubkey": hex_pubkey}
+    else:
+        raise HTTPException(status_code=404, detail="Public key not found")
 
 def temp_ban_pubkey(db: SessionLocal, pubkey: TempBanCreate):
+    # Validate pubkey is not empty
+    if not pubkey.pubkey or not pubkey.pubkey.strip():
+        raise HTTPException(status_code=400, detail="Pubkey cannot be empty")
+    
+    # Convert Npub to hex if necessary
+    if pubkey.pubkey.startswith("npub"):
+        hex_pubkey = convert_npub_to_hex(pubkey.pubkey)
+    else:
+        hex_pubkey = pubkey.pubkey
+    
     # Check if the public key is already temporarily banned
-    existing_temp_ban = db.query(TempBan).filter(TempBan.pubkey == pubkey.pubkey).first()
+    existing_temp_ban = db.query(TempBan).filter(TempBan.pubkey == hex_pubkey).first()
     
     if existing_temp_ban:
         # Extend the existing ban duration
@@ -75,16 +116,26 @@ def temp_ban_pubkey(db: SessionLocal, pubkey: TempBanCreate):
             "new_expiry_timestamp": existing_temp_ban.expiry_timestamp
         }
     else:
+        # Ensure the user exists in the main blocked list
+        existing_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == hex_pubkey).first()
+        if not existing_pubkey:
+            # Create a new permanent ban entry if user doesn't exist
+            db_pubkey = PublicKey(
+                pubkey=hex_pubkey, 
+                npub=pubkey.pubkey, 
+                timestamp=datetime.utcnow(), 
+                ban_reason=pubkey.ban_reason or "Temporary ban"
+            )
+            db.add(db_pubkey)
+            db.commit()
+            db.refresh(db_pubkey)
+        
         # Create a new temporary ban
         expiry = datetime.utcnow() + timedelta(hours=pubkey.duration)
-        db_temp_ban = TempBan(pubkey=pubkey.pubkey, expiry_timestamp=expiry)
+        db_temp_ban = TempBan(pubkey=hex_pubkey, expiry_timestamp=expiry)
         db.add(db_temp_ban)
         db.commit()
         db.refresh(db_temp_ban)
-        
-        # Update the ban reason if provided
-        if pubkey.ban_reason:
-            update_ban_reason(db, pubkey.pubkey, pubkey.ban_reason)
         
         return {
             "message": "Temporary ban applied",
@@ -94,10 +145,19 @@ def temp_ban_pubkey(db: SessionLocal, pubkey: TempBanCreate):
         }
 
 def remove_temp_ban(db: SessionLocal, pubkey: PublicKeyCreate):
-    db_temp_ban = db.query(TempBan).filter(TempBan.pubkey == pubkey.pubkey).first()
+    # Convert Npub to hex if necessary
+    if pubkey.pubkey.startswith("npub"):
+        hex_pubkey = convert_npub_to_hex(pubkey.pubkey)
+    else:
+        hex_pubkey = pubkey.pubkey
+    
+    db_temp_ban = db.query(TempBan).filter(TempBan.pubkey == hex_pubkey).first()
     if db_temp_ban:
         db.delete(db_temp_ban)
         db.commit()
+        return {"message": "Temporary ban removed", "status": "removed", "pubkey": hex_pubkey}
+    else:
+        raise HTTPException(status_code=404, detail="Temporary ban not found")
 
 def check_pubkey_status(db: SessionLocal, pubkey: str):
     # Convert Npub to hex if necessary
@@ -121,12 +181,13 @@ def check_pubkey_status(db: SessionLocal, pubkey: str):
 
     return {"status": "not_blocked"}
 
-def update_ban_reason(db: SessionLocal, pubkey: str, reason: str, moderator_name: str):
+def update_ban_reason(db: SessionLocal, pubkey: str, reason: str, moderator_name: str = None):
     hex_pubkey = convert_npub_to_hex(pubkey) if pubkey.startswith("npub") else pubkey
     db_pubkey = db.query(PublicKey).filter(PublicKey.pubkey == hex_pubkey).first()
     if db_pubkey:
         db_pubkey.ban_reason = reason
-        db_pubkey.moderator_name = moderator_name
+        if moderator_name:
+            db_pubkey.moderator_name = moderator_name
         db.commit()
         db.refresh(db_pubkey)
         return db_pubkey
@@ -182,6 +243,9 @@ def remove_blocked_ip(db: SessionLocal, ip: str):
 
 def get_blocked_words(db: SessionLocal):
     return db.query(Word).all()
+
+def get_blocked_ips(db: SessionLocal):
+    return db.query(IPAddress).all()
 
 def add_moderator(db: SessionLocal, name: str, private_key: str):
     # Check if a moderator with the same name already exists

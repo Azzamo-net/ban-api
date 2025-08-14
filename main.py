@@ -46,7 +46,19 @@ def get_db():
 @app.get("/blocked/pubkeys", response_model=list[schemas.PublicKey], summary="Get Blocked Public Keys", description="Retrieve a list of all blocked public keys.", tags=["Core"])
 async def get_blocked_pubkeys(db: Session = Depends(get_db)):
     try:
-        return crud.get_blocked_pubkeys(db)
+        blocked_pubkeys = crud.get_blocked_pubkeys(db)
+        # Convert database objects to Pydantic models
+        return [
+            schemas.PublicKey(
+                id=pubkey.id,
+                pubkey=pubkey.pubkey,
+                npub=pubkey.npub,
+                timestamp=pubkey.timestamp,
+                ban_reason=pubkey.ban_reason,
+                moderator_name=getattr(pubkey, 'moderator_name', None)
+            )
+            for pubkey in blocked_pubkeys
+        ]
     except Exception as e:
         logging.error(f"Error retrieving blocked public keys: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -172,23 +184,6 @@ async def get_public_blocked_words(db: Session = Depends(get_db)):
     blocked_words = crud.get_blocked_words(db)
     return [word.word for word in blocked_words]
 
-# Moderator Management
-# @app.post("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Add Moderator (Admin Only)", description="Add a new moderator. Requires admin API key.", tags=["Moderator Management"])
-# async def add_moderator(moderator: schemas.ModeratorCreate, db: Session = Depends(get_db)):
-#     return crud.add_moderator(db, moderator.name, moderator.private_key)
-
-# @app.delete("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Remove Moderator (Admin Only)", description="Remove a moderator. Requires admin API key.", tags=["Moderator Management"])
-# async def remove_moderator(moderator: schemas.ModeratorDelete, db: Session = Depends(get_db)):
-#     return crud.remove_moderator(db, moderator.name)
-
-# @app.get("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="List Moderators (Admin Only)", description="List all moderators. Requires admin API key.", tags=["Moderator Management"])
-# async def list_moderators(db: Session = Depends(get_db)):
-#     return crud.list_moderators(db)
-
-# @app.patch("/moderators", dependencies=[Depends(lambda: get_api_key(admin_only=True))], summary="Update Moderator Information (Admin Only)", description="Update the name or private key of an existing moderator. Requires admin API key.", tags=["Moderator Management"])
-# async def update_moderator_info(moderator: schemas.ModeratorUpdate, db: Session = Depends(get_db)):
-#     return crud.update_moderator_info(db, moderator.name, moderator.new_name, moderator.new_private_key)
-
 @app.get("/search/blocked", dependencies=[Depends(get_api_key)], summary="Search Blocked Entities", description="Search for blocked public keys, IPs, or words.", tags=["Search"])
 async def search_blocked_entities(entity_type: str, query: str, db: Session = Depends(get_db)):
     """
@@ -274,33 +269,33 @@ async def test_admin_simple():
     return {"message": "Admin access granted"}
 
 # Moderator Endpoints
-@app.post("/blocked/pubkeys", dependencies=[Depends(get_api_key)], summary="Ban Public Key", description="Ban a public key.", tags=["Moderator Operations"])
-async def ban_pubkey(pubkey: schemas.PublicKeyCreate, db: Session = Depends(get_db)):
-    return crud.add_blocked_pubkey(db, pubkey)
+# @app.post("/blocked/pubkeys", dependencies=[Depends(get_api_key)], summary="Ban Public Key", description="Ban a public key.", tags=["Moderator Operations"])
+# async def ban_pubkey(pubkey: schemas.PublicKeyCreate, db: Session = Depends(get_db)):
+#     return crud.add_blocked_pubkey(db, pubkey)
 
-@app.delete("/blocked/pubkeys", dependencies=[Depends(get_api_key)], summary="Unban Public Key", description="Unban a public key.", tags=["Moderator Operations"])
-async def unban_pubkey(pubkey: schemas.PublicKeyCreate, db: Session = Depends(get_db)):
-    return crud.remove_blocked_pubkey(db, pubkey)
+# @app.delete("/blocked/pubkeys", dependencies=[Depends(get_api_key)], summary="Unban Public Key", description="Unban a public key.", tags=["Moderator Operations"])
+# async def unban_pubkey(pubkey: schemas.PublicKeyCreate, db: Session = Depends(get_db)):
+#     return crud.remove_blocked_pubkey(db, pubkey)
 
-@app.post("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Add Blocked IP", description="Add a new IP address to the blocked list.", tags=["Moderator Operations"])
-async def add_blocked_ip(ip_data: dict = Body(...), db: Session = Depends(get_db)):
-    ip = ip_data.get("ip")
-    ban_reason = ip_data.get("ban_reason")
-    if not ip:
-        raise HTTPException(status_code=400, detail="IP address is required")
-    return crud.add_blocked_ip(db, ip, ban_reason)
+# @app.post("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Add Blocked IP", description="Add a new IP address to the blocked list.", tags=["Moderator Operations"])
+# async def add_blocked_ip(ip_data: dict = Body(...), db: Session = Depends(get_db)):
+#     ip = ip_data.get("ip")
+#     ban_reason = ip_data.get("ban_reason")
+#     if not ip:
+#         raise HTTPException(status_code=400, detail="IP address is required")
+#     return crud.add_blocked_ip(db, ip, ban_reason)
 
-@app.delete("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Remove Blocked IP", description="Remove an IP address from the blocked list.", tags=["Moderator Operations"])
-async def remove_blocked_ip(ip: str, db: Session = Depends(get_db)):
-    return crud.remove_blocked_ip(db, ip)
+# @app.delete("/blocked/ips", dependencies=[Depends(get_api_key)], summary="Remove Blocked IP", description="Remove an IP address from the blocked list.", tags=["Moderator Operations"])
+# async def remove_blocked_ip(ip: str, db: Session = Depends(get_db)):
+#     return crud.remove_blocked_ip(db, ip)
 
-@app.post("/temp-ban/pubkeys", dependencies=[Depends(get_api_key)], summary="Temporarily Ban Public Key", description="Temporarily ban a public key for a specified duration.", tags=["Moderator Operations"])
-async def temp_ban_pubkey(pubkey: schemas.TempBanCreate, db: Session = Depends(get_db)):
-    return crud.temp_ban_pubkey(db, pubkey)
+# @app.post("/temp-ban/pubkeys", dependencies=[Depends(get_api_key)], summary="Temporarily Ban Public Key", description="Temporarily ban a public key for a specified duration.", tags=["Moderator Operations"])
+# async def temp_ban_pubkey(pubkey: schemas.TempBanCreate, db: Session = Depends(get_db)):
+#     return crud.temp_ban_pubkey(db, pubkey)
 
-@app.delete("/temp-ban/pubkeys", dependencies=[Depends(get_api_key)], summary="Remove Temporary Ban", description="Remove a temporary ban on a public key.", tags=["Moderator Operations"])
-async def remove_temp_ban(pubkey: schemas.PublicKeyCreate, db: Session = Depends(get_db)):
-    return crud.remove_temp_ban(db, pubkey)
+# @app.delete("/temp-ban/pubkeys", dependencies=[Depends(get_api_key)], summary="Remove Temporary Ban", description="Remove a temporary ban on a public key.", tags=["Moderator Operations"])
+# async def remove_temp_ban(pubkey: schemas.PublicKeyCreate, db: Session = Depends(get_db)):
+#     return crud.remove_temp_ban(db, pubkey)
 
 @app.on_event("startup")
 async def startup_event():
@@ -313,4 +308,4 @@ async def shutdown_event():
     backup_sqlite()
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010)), debug=debug_mode) 
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("APP_PORT", 8010)), log_level="debug" if debug_mode else "info") 
