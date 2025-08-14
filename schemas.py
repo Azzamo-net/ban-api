@@ -22,6 +22,7 @@ class PublicKey(PublicKeyBase):
     npub: str
     timestamp: datetime
     ban_reason: str | None = None
+    moderator_name: str | None = None
 
     class Config:
         from_attributes = True
